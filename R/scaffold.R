@@ -35,10 +35,10 @@ make_file_dirs <- function(path = ".", code = TRUE, data = TRUE, output = TRUE,
 #' Scaffold a new research project
 #'
 #' Creates a project of one of two archetypes:
-#' * `"analysis"` — clones the analysis template repo (mechanism: a fresh clone
+#' * `"analysis"` - clones the analysis template repo (mechanism: a fresh clone
 #'   with history stripped), stamps the project name, and optionally adds a
 #'   `targets` pipeline stub.
-#' * `"package"` — wraps [usethis::create_package()] and layers the package
+#' * `"package"` - wraps [usethis::create_package()] and layers the package
 #'   best-practices set (MIT license, testthat 3, roxygen markdown, pkgdown,
 #'   R-CMD-check + coverage + pkgdown GitHub Actions, NEWS, self-contained
 #'   `.claude/`).
@@ -132,7 +132,7 @@ create_project <- function(name, path = ".", type = c("analysis", "package"),
 
 .write_targets_stub <- function(dest) {
   writeLines(c(
-    "# _targets.R — pipeline definition. Run with targets::tar_make().",
+    "# _targets.R - pipeline definition. Run with targets::tar_make().",
     "library(targets)",
     "tar_source(\"code/functions\")",
     "tar_option_set(format = \"qs2\")",
