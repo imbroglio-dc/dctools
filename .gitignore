@@ -1,0 +1,28 @@
+# R
+.Rproj.user/
+.Rhistory
+.RData
+.RDataTmp
+.Ruserdata
+*.Rproj
+.Renviron
+
+# build artifacts
+/*.tar.gz
+/*.Rcheck/
+src/*.o
+src/*.so
+src/*.dll
+
+# pkgdown site (built in CI)
+docs/
+
+# scratch
+scratch/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Claude local overrides
+.claude/settings.local.json

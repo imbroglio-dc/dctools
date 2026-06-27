@@ -1,0 +1,47 @@
+Package: dctools
+Title: Reusable Utilities and Project Scaffolding for Biostatistics Research
+Version: 0.0.0.9000
+Authors@R:
+    person(given = "David",
+           family = "Chen",
+           role = c("aut", "cre"),
+           email = "david.chen1089@gmail.com",
+           comment = c(ORCID = "0000-0002-9413-8152"))
+Description: A personal toolkit of repeated-task helpers for prediction- and
+    causal-inference research in R: project scaffolding (create_project()),
+    package and parallel-controller management, data validation, PHI-safe
+    output handling, clinical formulas, and house plotting/table defaults.
+    Data manipulation follows a dplyr-first grammar; large-data backends
+    (arrow, dbplyr) reuse the same verbs.
+License: MIT + file LICENSE
+Encoding: UTF-8
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.3.2
+URL: https://github.com/imbroglio-dc/helpers
+BugReports: https://github.com/imbroglio-dc/helpers/issues
+Depends:
+    R (>= 4.2.0)
+Imports:
+    cli,
+    dplyr,
+    fs,
+    gert,
+    ggplot2,
+    parallel,
+    stats,
+    usethis,
+    utils
+Suggests:
+    arrow,
+    BiocManager,
+    crew,
+    dbplyr,
+    gtsummary,
+    knitr,
+    ps,
+    renv,
+    rmarkdown,
+    testthat (>= 3.0.0),
+    withr
+Config/testthat/edition: 3
+VignetteBuilder: knitr

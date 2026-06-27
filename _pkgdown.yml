@@ -1,0 +1,30 @@
+url: https://imbroglio-dc.github.io/helpers/
+
+template:
+  bootstrap: 5
+
+reference:
+  - title: Project scaffolding
+    contents:
+      - create_project
+      - make_file_dirs
+  - title: Packages & environment
+    contents:
+      - read_packages
+      - load_packages
+      - configure_parallel
+  - title: Data validation
+    contents:
+      - assert_columns
+      - check_unique_id
+      - flag_out_of_range
+  - title: PHI-safe output
+    contents:
+      - suppress_small_cells
+  - title: Clinical formulas
+    contents:
+      - ckd_epi_2021
+  - title: Visualization & tables
+    contents:
+      - theme_dc
+      - tbl1
