@@ -18,6 +18,15 @@ reference:
       - assert_columns
       - check_unique_id
       - flag_out_of_range
+  - title: Data-intake QC
+    contents:
+      - describe_cohort
+      - detect_missing_sentinels
+      - check_colnames
+      - clean_colnames
+      - check_types
+      - check_constant_cols
+      - check_collinearity
   - title: PHI-safe output
     contents:
       - suppress_small_cells

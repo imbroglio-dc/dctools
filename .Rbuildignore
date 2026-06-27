@@ -8,6 +8,7 @@
 ^air\.toml$
 ^\.lintr$
 ^CONTRIBUTING\.md$
+^ROADMAP\.md$
 ^codecov\.yml$
 ^\.claude$
 ^scratch$
