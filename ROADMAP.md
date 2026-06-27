@@ -51,3 +51,33 @@ for large data; base R where it keeps dependencies low.
 ## 8. Reproducibility / workflow
 - [ ] `session_fingerprint()` — R version, package versions, seed, git SHA into output/
 - [ ] `tar_template()` helpers — common targets patterns (map-over-outcomes, CV branching)
+
+## 9. Model assumptions & diagnostics (regression / GLM)
+- [ ] `check_residuals(model)` — normality (QQ + Shapiro/KS), homoscedasticity (Breusch-Pagan, scale-location), residual-vs-fitted, autocorrelation (Durbin-Watson)
+- [ ] `check_influence(model)` — Cook's distance, leverage, DFFITS, outlier flags
+- [ ] `check_multicollinearity(model)` — VIF / generalized VIF on a fitted model
+- [ ] `check_linearity(model)` — partial-residual / component+residual checks for continuous terms
+- [ ] `check_overdispersion(model)` — Poisson/NB dispersion ratio + test
+- [ ] `check_separation(model)` — (quasi-)complete separation in logistic models
+- [ ] `model_assumption_report(model)` — one-call bundle of the above (guarded `performance`/`see`)
+
+## 10. Causal & semiparametric diagnostics
+- [ ] `check_positivity(data, treatment, covariates)` — propensity overlap: PS distribution by arm, % near 0/1, suggested trimming, effective sample size
+- [ ] `check_balance(data, treatment, covariates, weights = NULL)` — standardized mean differences pre/post weighting + Love plot
+- [ ] `check_weights(weights)` — IPW diagnostics: max weight, ESS, coefficient of variation, share of total weight in top-k
+- [ ] `check_eic_convergence(eic, n, se, threshold = NULL)` — TMLE: |mean(EIC)| vs se/sqrt(n); flag non-convergence (default threshold se/(sqrt(n)*log(n)))
+- [ ] `check_ps_calibration(ps, treatment)` — is the propensity model itself calibrated?
+- [ ] `summarize_eic(eic)` — plug-in vs one-step, influence-curve-based SE and CIs
+
+## 11. Prediction-model performance & validation
+- [ ] `eval_discrimination(pred, obs)` — AUC (+ DeLong CI), AUPRC, Brier
+- [ ] `eval_calibration(pred, obs)` — calibration slope/intercept, ICI / E50 / E90, calibration curve
+- [ ] `eval_clinical_utility(pred, obs)` — decision-curve / net-benefit across thresholds
+- [ ] `bootstrap_optimism(fit_fun, data)` — Harrell optimism-corrected performance + shrinkage factor
+- [ ] `crossfit_performance(...)` — honest CV / cross-fit metrics with CIs (leakage-guarded splits)
+- [ ] `compare_auc(pred1, pred2, obs)` — DeLong paired test (NRI/IDI with caveats)
+
+## 12. Simulation & inference utilities
+- [ ] `coverage_report(estimates, ses, truth)` — bias, RMSE, CI coverage, Monte-Carlo SE (feeds the simulation-study skill)
+- [ ] `summarize_sim(results)` — tidy aggregation of estimator runs by scenario
+- [ ] `check_ci_coverage(ci_lo, ci_hi, truth)` — nominal vs empirical coverage with MC error bars
