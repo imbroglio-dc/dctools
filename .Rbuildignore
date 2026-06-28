@@ -1,0 +1,17 @@
+^.*\.Rproj$
+^\.Rproj\.user$
+^LICENSE\.md$
+^\.github$
+^_pkgdown\.yml$
+^docs$
+^pkgdown$
+^air\.toml$
+^\.lintr$
+^CONTRIBUTING\.md$
+^ROADMAP\.md$
+^CLAUDE\.md$
+^codecov\.yml$
+^\.claude$
+^scratch$
+^README\.Rmd$
+^\.git$
