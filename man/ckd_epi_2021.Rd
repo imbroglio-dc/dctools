@@ -17,8 +17,11 @@ ckd_epi_2021(scr, age, is_female)
 Numeric vector of eGFR (mL/min/1.73 m^2).
 }
 \description{
-Vectorised. Serum creatinine in mg/dL, age in years. Returns \code{NA} where
-any input is \code{NA} or \code{scr <= 0}.
+Vectorised. Serum creatinine in mg/dL, age in years. Returns \code{NA} where any
+input is \code{NA} or \code{scr <= 0}.
+}
+\examples{
+ckd_epi_2021(scr = c(0.8, 1.4), age = c(60, 72), is_female = c(TRUE, FALSE))
 }
 \references{
 Inker LA, et al. NEJM 2021. \doi{10.1056/NEJMoa2102953}

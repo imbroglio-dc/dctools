@@ -4,7 +4,13 @@
 \alias{tbl1}
 \title{Descriptive "Table 1" via gtsummary}
 \usage{
-tbl1(data, by = NULL, include = NULL, add_overall = !is.null(by), add_p = FALSE)
+tbl1(
+  data,
+  by = NULL,
+  include = NULL,
+  add_overall = !is.null(by),
+  add_p = FALSE
+)
 }
 \arguments{
 \item{data}{A data frame.}
@@ -13,8 +19,8 @@ tbl1(data, by = NULL, include = NULL, add_overall = !is.null(by), add_p = FALSE)
 
 \item{include}{Optional character vector of columns to include (default: all).}
 
-\item{add_overall}{Logical; add an overall column (default \code{TRUE} when
-\code{by} is supplied).}
+\item{add_overall}{Logical; add an overall column (default \code{TRUE} when \code{by}
+is supplied).}
 
 \item{add_p}{Logical; add a group comparison p-value (default \code{FALSE}).}
 }
@@ -22,8 +28,7 @@ tbl1(data, by = NULL, include = NULL, add_overall = !is.null(by), add_p = FALSE)
 A \code{gtsummary} table object.
 }
 \description{
-Thin wrapper around \code{gtsummary::tbl_summary()} that applies project
-defaults (median [IQR] for continuous, n (\%) for categorical) and optionally
-adds an overall column and a by-group p-value. Requires the \code{gtsummary}
-package.
+Thin wrapper around \code{\link[gtsummary:tbl_summary]{gtsummary::tbl_summary()}} that applies project defaults
+(median \link{IQR} for continuous, n (\%) for categorical) and optionally adds an
+overall column and a by-group p-value. Requires the \code{gtsummary} package.
 }

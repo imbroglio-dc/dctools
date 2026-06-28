@@ -17,8 +17,8 @@ suppress_small_cells(
 
 \item{cols}{Columns to screen. Default: all numeric columns.}
 
-\item{threshold}{Minimum safe cell count (default 11; cells \code{< threshold} and
-\code{> 0} are suppressed).}
+\item{threshold}{Minimum safe cell count (default 11; cells \verb{< threshold} and
+\verb{> 0} are suppressed).}
 
 \item{marker}{Replacement value for suppressed cells (default \code{"<11"}).}
 
@@ -29,8 +29,12 @@ suppress_small_cells(
 become character).
 }
 \description{
-Replaces counts in \code{cols} that fall in \code{1:(threshold - 1)} with a
-marker, so aggregate outputs cannot re-identify individuals. Zero is left
-untouched (a true zero is not disclosive); use \code{mask_zero = TRUE} to also
-blank zeros when complementary suppression is a concern.
+Replaces counts in \code{cols} that fall in \code{1:(threshold - 1)} with a marker, so
+aggregate outputs cannot re-identify individuals. Zero is left untouched (a
+true zero is not disclosive); use \code{mask_zero = TRUE} to also blank zeros when
+complementary suppression is a concern.
+}
+\examples{
+tab <- data.frame(group = c("a", "b"), n = c(3, 42))
+suppress_small_cells(tab, cols = "n")
 }

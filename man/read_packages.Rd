@@ -13,7 +13,12 @@ read_packages(path)
 A character vector of package names (de-duplicated, no blanks).
 }
 \description{
-Lines beginning with \code{#} or \code{//} (after optional whitespace) are
-treated as comments and ignored, as are blank lines. Implemented in base R so
-it carries no dependencies.
+Lines beginning with \verb{#} or \verb{//} (after optional whitespace) are treated as
+comments and ignored, as are blank lines. Implemented in base R so it carries
+no dependencies.
+}
+\examples{
+tmp <- tempfile()
+writeLines(c("dplyr", "# a comment", "", "ggplot2"), tmp)
+read_packages(tmp)
 }

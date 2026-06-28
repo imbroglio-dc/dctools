@@ -10,13 +10,12 @@ describe_cohort(data)
 \item{data}{A data frame.}
 }
 \value{
-A named list: \code{dims}, \code{overview}, \code{colname_issues},
-\code{type_issues}, \code{constant_cols}, \code{missing_sentinels},
-\code{collinearity}.
+A named list: \code{dims}, \code{overview}, \code{colname_issues}, \code{type_issues},
+\code{constant_cols}, \code{missing_sentinels}, \code{collinearity}.
 }
 \description{
 Bundles a per-column overview with the QC screens (\code{check_colnames},
 \code{check_types}, \code{check_constant_cols}, \code{detect_missing_sentinels},
-\code{check_collinearity}) into a single structured report. Suitable for
-diffing across data refreshes.
+\code{check_collinearity}) into a single structured report. Suitable for diffing
+across data refreshes.
 }

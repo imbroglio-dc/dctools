@@ -21,8 +21,7 @@ configure_parallel(
 A \code{crew_controller_local} object for use in a \code{targets} pipeline.
 }
 \description{
-Creates a \code{crew::crew_controller_local()} capped by both the requested
-worker count and available system RAM divided by \code{memory_per_worker}, so a
-pipeline does not oversubscribe memory. Requires the \code{crew} and \code{ps}
-packages.
+Creates a \code{\link[crew:crew_controller_local]{crew::crew_controller_local()}} capped by both the requested worker
+count and available system RAM divided by \code{memory_per_worker}, so a pipeline
+does not oversubscribe memory. Requires the \code{crew} and \code{ps} packages.
 }

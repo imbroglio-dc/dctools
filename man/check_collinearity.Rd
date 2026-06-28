@@ -12,8 +12,8 @@ check_collinearity(data, threshold = 0.9)
 \item{threshold}{Absolute correlation cutoff (default 0.9).}
 }
 \value{
-A data frame: \code{col1}, \code{col2}, \code{correlation}, sorted by
-\code{abs()}. Empty when fewer than two numeric columns or no pair qualifies.
+A data frame: \code{col1}, \code{col2}, \code{correlation}, sorted by \code{abs()}.
+Empty when fewer than two numeric columns or no pair qualifies.
 }
 \description{
 Pairwise Pearson correlation across numeric columns, returning pairs at or

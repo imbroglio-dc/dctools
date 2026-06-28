@@ -18,7 +18,10 @@ Invisibly, a data frame with columns \code{index} and \code{value} for each
 out-of-range element (empty when all in range).
 }
 \description{
-Returns the indices (and values) of \code{x} that fall below \code{lo} or above
-\code{hi}. Useful for codebook range checks during data cleaning. \code{NA}
-values are ignored.
+Returns the indices (and values) of \code{x} that fall below \code{lo} or above \code{hi}.
+Useful for codebook range checks during data cleaning. \code{NA} values are
+ignored.
+}
+\examples{
+flag_out_of_range(c(5, 200, NA, -1), lo = 0, hi = 100, label = "sbp")
 }

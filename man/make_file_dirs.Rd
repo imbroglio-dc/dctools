@@ -25,7 +25,7 @@ make_file_dirs(
 \code{path}, invisibly.
 }
 \description{
-Idempotent. Creates \code{code/}, \code{data/}, \code{output/}, \code{docs/},
-and \code{tests/} subtrees under \code{path} (only those requested), each with
-a \code{.gitkeep} marker, and ensures \code{scratch/} is git-ignored.
+Idempotent. Creates \verb{code/}, \verb{data/}, \verb{output/}, \verb{docs/}, and \verb{tests/}
+subtrees under \code{path} (only those requested), each with a \code{.gitkeep} marker,
+and ensures \verb{scratch/} is git-ignored.
 }

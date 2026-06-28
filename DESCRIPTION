@@ -16,7 +16,7 @@ Description: A personal toolkit of repeated-task helpers for prediction- and
 License: MIT + file LICENSE
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
-RoxygenNote: 7.3.2
+RoxygenNote: 7.3.3
 URL: https://github.com/imbroglio-dc/helpers
 BugReports: https://github.com/imbroglio-dc/helpers/issues
 Depends:

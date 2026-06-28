@@ -15,7 +15,11 @@ assert_columns(data, cols)
 \code{data}, invisibly.
 }
 \description{
-Errors (via \code{cli::cli_abort()}) if any of \code{cols} is missing from
-\code{data}, naming the offenders. Invisibly returns \code{data} so it can be
-used inline in a pipe.
+Errors (via \code{\link[cli:cli_abort]{cli::cli_abort()}}) if any of \code{cols} is missing from \code{data},
+naming the offenders. Invisibly returns \code{data} so it can be used inline in a
+pipe.
+}
+\examples{
+df <- data.frame(id = 1:3, age = c(40, 50, 60))
+assert_columns(df, c("id", "age"))
 }

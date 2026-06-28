@@ -27,8 +27,8 @@ A data frame with one row per column/sentinel found: \code{column},
 \code{type}, \code{sentinel}, \code{n}, \code{prop}.
 }
 \description{
-Scans for values that commonly encode missingness but are not stored as
-\code{NA}: numeric codes (e.g. \code{-9}, \code{999}) and string tokens (e.g.
-\code{""}, \code{"N/A"}, \code{"unknown"}, whitespace-only). Never modifies the
-data; returns a report so you can decide what to convert.
+Scans for values that commonly encode missingness but are not stored as \code{NA}:
+numeric codes (e.g. \code{-9}, \code{999}) and string tokens (e.g. \code{""}, \code{"N/A"},
+\code{"unknown"}, whitespace-only). Never modifies the data; returns a report so
+you can decide what to convert.
 }

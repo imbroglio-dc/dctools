@@ -20,7 +20,7 @@ create_project(
 
 \item{type}{\code{"analysis"} or \code{"package"}.}
 
-\item{targets}{Logical; for analysis projects, scaffold a \code{_targets.R} stub.}
+\item{targets}{Logical; for analysis projects, scaffold a \verb{_targets.R} stub.}
 
 \item{template_repo}{\code{owner/repo} of the analysis template
 (default \code{"imbroglio-dc/UCSF-Anesthesia_Template"}).}
@@ -33,12 +33,12 @@ The created project path, invisibly.
 \description{
 Creates a project of one of two archetypes:
 \itemize{
-\item \code{"analysis"} - clones the analysis template repo (mechanism: a fresh
-clone with history stripped), stamps the project name, and optionally adds a
+\item \code{"analysis"} - clones the analysis template repo (mechanism: a fresh clone
+with history stripped), stamps the project name, and optionally adds a
 \code{targets} pipeline stub.
-\item \code{"package"} - wraps \code{usethis::create_package()} and layers the
-package best-practices set (MIT license, testthat 3, roxygen markdown,
-pkgdown, R-CMD-check + coverage + pkgdown GitHub Actions, NEWS, self-contained
-\code{.claude/}).
+\item \code{"package"} - wraps \code{\link[usethis:create_package]{usethis::create_package()}} and layers the package
+best-practices set (MIT license, testthat 3, roxygen markdown, pkgdown,
+R-CMD-check + coverage + pkgdown GitHub Actions, NEWS, self-contained
+\verb{.claude/}).
 }
 }

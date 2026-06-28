@@ -13,8 +13,8 @@ check_types(data, max_factor_levels = 50)
 high-cardinality (default 50).}
 }
 \value{
-A data frame: \code{column}, \code{stored_type}, \code{issue}, \code{detail}
-(one row per finding; empty when nothing is flagged).
+A data frame: \code{column}, \code{stored_type}, \code{issue}, \code{detail} (one row per
+finding; empty when nothing is flagged).
 }
 \description{
 Conservative checks that surface common typing issues for review: text that

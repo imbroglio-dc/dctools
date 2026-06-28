@@ -14,6 +14,6 @@ clean_colnames(data)
 }
 \description{
 Splits camelCase, lower-cases, replaces runs of non-alphanumeric characters
-with \code{_}, trims, and de-duplicates. The before/after map is attached as
-the \code{"colname_map"} attribute.
+with \verb{_}, trims, and de-duplicates. The before/after map is attached as the
+\code{"colname_map"} attribute.
 }

@@ -18,3 +18,7 @@ A ggplot2 theme object.
 A clean minimal theme used across project figures: no minor grid, muted axis
 titles, left-aligned plot title.
 }
+\examples{
+library(ggplot2)
+ggplot(mtcars, aes(wt, mpg)) + geom_point() + theme_dc()
+}

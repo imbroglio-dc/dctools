@@ -11,13 +11,17 @@ check_unique_id(data, id, error = TRUE)
 
 \item{id}{Character vector of key column name(s).}
 
-\item{error}{Logical; if \code{TRUE} (default) abort on duplicates, otherwise
-warn and return the duplicated keys.}
+\item{error}{Logical; if \code{TRUE} (default) abort on duplicates, otherwise warn
+and return the duplicated keys.}
 }
 \value{
-Invisibly, a data frame of duplicated keys with their counts (empty when
-the key is unique).
+Invisibly, a data frame of duplicated keys with their counts (empty
+when the key is unique).
 }
 \description{
 Check that a column (or set of columns) uniquely identifies rows
+}
+\examples{
+df <- data.frame(id = c(1, 1, 2), x = 1:3)
+check_unique_id(df, "id", error = FALSE)
 }
