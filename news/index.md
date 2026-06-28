@@ -1,0 +1,33 @@
+# Changelog
+
+## dctools (development version)
+
+- Initial package scaffold (renamed from the `helpers` script
+  collection).
+- Project scaffolding:
+  [`create_project()`](https://imbroglio-dc.github.io/helpers/reference/create_project.md)
+  (analysis + package archetypes) and
+  [`make_file_dirs()`](https://imbroglio-dc.github.io/helpers/reference/make_file_dirs.md).
+- Package & environment helpers:
+  [`read_packages()`](https://imbroglio-dc.github.io/helpers/reference/read_packages.md),
+  [`load_packages()`](https://imbroglio-dc.github.io/helpers/reference/load_packages.md),
+  [`configure_parallel()`](https://imbroglio-dc.github.io/helpers/reference/configure_parallel.md).
+- Data validation:
+  [`assert_columns()`](https://imbroglio-dc.github.io/helpers/reference/assert_columns.md),
+  [`check_unique_id()`](https://imbroglio-dc.github.io/helpers/reference/check_unique_id.md),
+  [`flag_out_of_range()`](https://imbroglio-dc.github.io/helpers/reference/flag_out_of_range.md).
+- Data-intake QC:
+  [`describe_cohort()`](https://imbroglio-dc.github.io/helpers/reference/describe_cohort.md),
+  [`detect_missing_sentinels()`](https://imbroglio-dc.github.io/helpers/reference/detect_missing_sentinels.md),
+  [`check_colnames()`](https://imbroglio-dc.github.io/helpers/reference/check_colnames.md),
+  [`clean_colnames()`](https://imbroglio-dc.github.io/helpers/reference/clean_colnames.md),
+  [`check_types()`](https://imbroglio-dc.github.io/helpers/reference/check_types.md),
+  [`check_constant_cols()`](https://imbroglio-dc.github.io/helpers/reference/check_constant_cols.md),
+  [`check_collinearity()`](https://imbroglio-dc.github.io/helpers/reference/check_collinearity.md).
+- PHI-safe output:
+  [`suppress_small_cells()`](https://imbroglio-dc.github.io/helpers/reference/suppress_small_cells.md).
+- Clinical formulas:
+  [`ckd_epi_2021()`](https://imbroglio-dc.github.io/helpers/reference/ckd_epi_2021.md).
+- House plotting / tables:
+  [`theme_dc()`](https://imbroglio-dc.github.io/helpers/reference/theme_dc.md),
+  [`tbl1()`](https://imbroglio-dc.github.io/helpers/reference/tbl1.md).
