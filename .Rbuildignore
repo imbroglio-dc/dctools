@@ -10,6 +10,7 @@
 ^CONTRIBUTING\.md$
 ^ROADMAP\.md$
 ^CLAUDE\.md$
+^memos$
 ^codecov\.yml$
 ^\.claude$
 ^scratch$
