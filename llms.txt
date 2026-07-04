@@ -8,6 +8,7 @@ repository (the package itself is named `dctools`).
 
 ``` r
 
+
 # install.packages("pak")
 pak::pak("imbroglio-dc/helpers")
 ```
@@ -29,6 +30,7 @@ pak::pak("imbroglio-dc/helpers")
 is the single entry point for both project archetypes:
 
 ``` r
+
 
 # Analysis project: clones the analysis template, stamps the name,
 # optionally adds a targets pipeline.

@@ -49,14 +49,13 @@
   <main id="main" class="col-md-9"><div class="section level1">
 <div class="page-header"><h1 id="dctools">dctools<a class="anchor" aria-label="anchor" href="#dctools"></a>
 </h1></div>
-<!-- badges: start -->
-
 <p><code>dctools</code> is a personal toolkit of repeated-task helpers for prediction- and causal-inference research in R. The package lives in the <code>helpers</code> repository (the package itself is named <code>dctools</code>).</p>
 <div class="section level2">
 <h2 id="installation">Installation<a class="anchor" aria-label="anchor" href="#installation"></a>
 </h2>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># install.packages("pak")</span></span>
+<code class="sourceCode R"><span></span>
+<span><span class="co"># install.packages("pak")</span></span>
 <span><span class="fu">pak</span><span class="fu">::</span><span class="fu"><a href="https://pak.r-lib.org/reference/pak.html" class="external-link">pak</a></span><span class="op">(</span><span class="st">"imbroglio-dc/helpers"</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level2">
@@ -64,8 +63,8 @@
 </h2>
 <table class="table">
 <colgroup>
-<col width="35%">
-<col width="64%">
+<col width="50%">
+<col width="50%">
 </colgroup>
 <thead><tr>
 <th>Area</th>
@@ -75,33 +74,33 @@
 <tr>
 <td><strong>Project scaffolding</strong></td>
 <td>
-<code><a href="reference/create_project.html">create_project()</a></code>, <code><a href="reference/make_file_dirs.html">make_file_dirs()</a></code>
+<a href="https://imbroglio-dc.github.io/helpers/reference/create_project.md"><code>create_project()</code></a>, <a href="https://imbroglio-dc.github.io/helpers/reference/make_file_dirs.md"><code>make_file_dirs()</code></a>
 </td>
 </tr>
 <tr>
 <td><strong>Packages &amp; environment</strong></td>
 <td>
-<code><a href="reference/read_packages.html">read_packages()</a></code>, <code><a href="reference/load_packages.html">load_packages()</a></code>, <code><a href="reference/configure_parallel.html">configure_parallel()</a></code>
+<a href="https://imbroglio-dc.github.io/helpers/reference/read_packages.md"><code>read_packages()</code></a>, <a href="https://imbroglio-dc.github.io/helpers/reference/load_packages.md"><code>load_packages()</code></a>, <a href="https://imbroglio-dc.github.io/helpers/reference/configure_parallel.md"><code>configure_parallel()</code></a>
 </td>
 </tr>
 <tr>
 <td><strong>Data validation</strong></td>
 <td>
-<code><a href="reference/assert_columns.html">assert_columns()</a></code>, <code><a href="reference/check_unique_id.html">check_unique_id()</a></code>, <code><a href="reference/flag_out_of_range.html">flag_out_of_range()</a></code>
+<a href="https://imbroglio-dc.github.io/helpers/reference/assert_columns.md"><code>assert_columns()</code></a>, <a href="https://imbroglio-dc.github.io/helpers/reference/check_unique_id.md"><code>check_unique_id()</code></a>, <a href="https://imbroglio-dc.github.io/helpers/reference/flag_out_of_range.md"><code>flag_out_of_range()</code></a>
 </td>
 </tr>
 <tr>
 <td><strong>PHI-safe output</strong></td>
-<td><code><a href="reference/suppress_small_cells.html">suppress_small_cells()</a></code></td>
+<td><a href="https://imbroglio-dc.github.io/helpers/reference/suppress_small_cells.md"><code>suppress_small_cells()</code></a></td>
 </tr>
 <tr>
 <td><strong>Clinical formulas</strong></td>
-<td><code><a href="reference/ckd_epi_2021.html">ckd_epi_2021()</a></code></td>
+<td><a href="https://imbroglio-dc.github.io/helpers/reference/ckd_epi_2021.md"><code>ckd_epi_2021()</code></a></td>
 </tr>
 <tr>
 <td><strong>Visualization &amp; tables</strong></td>
 <td>
-<code><a href="reference/theme_dc.html">theme_dc()</a></code>, <code><a href="reference/tbl1.html">tbl1()</a></code>
+<a href="https://imbroglio-dc.github.io/helpers/reference/theme_dc.md"><code>theme_dc()</code></a>, <a href="https://imbroglio-dc.github.io/helpers/reference/tbl1.md"><code>tbl1()</code></a>
 </td>
 </tr>
 </tbody>
@@ -110,9 +109,10 @@
 <div class="section level2">
 <h2 id="scaffolding-a-new-project">Scaffolding a new project<a class="anchor" aria-label="anchor" href="#scaffolding-a-new-project"></a>
 </h2>
-<p><code><a href="reference/create_project.html">create_project()</a></code> is the single entry point for both project archetypes:</p>
+<p><a href="https://imbroglio-dc.github.io/helpers/reference/create_project.md"><code>create_project()</code></a> is the single entry point for both project archetypes:</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Analysis project: clones the analysis template, stamps the name,</span></span>
+<code class="sourceCode R"><span></span>
+<span><span class="co"># Analysis project: clones the analysis template, stamps the name,</span></span>
 <span><span class="co"># optionally adds a targets pipeline.</span></span>
 <span><span class="fu">dctools</span><span class="fu">::</span><span class="fu"><a href="reference/create_project.html">create_project</a></span><span class="op">(</span><span class="st">"sepsis-aki"</span>, type <span class="op">=</span> <span class="st">"analysis"</span>, targets <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
 <span></span>
@@ -167,14 +167,7 @@
 </ul>
 </div>
 
-<div class="dev-status">
-<h2 data-toc-skip>Dev status</h2>
-<ul class="list-unstyled">
-<li><a href="https://github.com/imbroglio-dc/helpers/actions/workflows/R-CMD-check.yaml" class="external-link"><img src="https://github.com/imbroglio-dc/helpers/actions/workflows/R-CMD-check.yaml/badge.svg" alt="R-CMD-check"></a></li>
-<li><a href="https://app.codecov.io/gh/imbroglio-dc/helpers" class="external-link"><img src="https://codecov.io/gh/imbroglio-dc/helpers/branch/main/graph/badge.svg" alt="Codecov test coverage"></a></li>
-<li><a href="https://lifecycle.r-lib.org/articles/stages.html#experimental" class="external-link"><img src="https://img.shields.io/badge/lifecycle-experimental-orange.svg" alt="Lifecycle: experimental"></a></li>
-</ul>
-</div>
+
 
   </aside>
 </div>

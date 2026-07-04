@@ -14,10 +14,12 @@ Chen D (2026). *dctools: Reusable Utilities and Project Scaffolding for
 Biostatistics Research*. R package version 0.0.0.9000,
 <https://github.com/imbroglio-dc/helpers>.
 
-    @Manual{,
-      title = {dctools: Reusable Utilities and Project Scaffolding for Biostatistics Research},
-      author = {David Chen},
-      year = {2026},
-      note = {R package version 0.0.0.9000},
-      url = {https://github.com/imbroglio-dc/helpers},
-    }
+``` R
+@Manual{,
+  title = {dctools: Reusable Utilities and Project Scaffolding for Biostatistics Research},
+  author = {David Chen},
+  year = {2026},
+  note = {R package version 0.0.0.9000},
+  url = {https://github.com/imbroglio-dc/helpers},
+}
+```
