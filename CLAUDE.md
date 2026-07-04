@@ -1,8 +1,8 @@
 # CLAUDE.md — dctools
 
 This file guides Claude Code when working in this repository. `dctools` is a personal R
-package of tested helper functions for prediction- and causal-inference research. It lives
-in the `helpers` repo; the package is named **`dctools`**.
+package of tested helper functions for prediction- and causal-inference research. The
+repo and the package are both named **`dctools`**.
 
 ## Design philosophy (read before adding or changing functions) — IMPORTANT
 
@@ -33,6 +33,9 @@ prediction-eval, …). Keep `ROADMAP.md` and the marketplace's
 `memos/decisions.md`): ROADMAP sections 9-12 are the verification gates that make
 agent-delegated analyses auditable — implement a function when a real analysis or its
 home skill needs the gate. Cross-repo strategy: `biostat-support/docs/north-star.md`.
+**Current focus, next actions, and progress live in `PROJECT.md`** — refresh it
+(`/project-status`) when they change. Tooling friction goes to `workflow-feedback.md`,
+not the decision log.
 
 ## Package discipline (non-negotiable)
 
