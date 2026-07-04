@@ -11,6 +11,8 @@
 ^ROADMAP\.md$
 ^CLAUDE\.md$
 ^memos$
+^PROJECT\.md$
+^workflow-feedback\.md$
 ^codecov\.yml$
 ^\.claude$
 ^scratch$
