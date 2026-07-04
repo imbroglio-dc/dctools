@@ -47,6 +47,7 @@
 <li>Keep the <em>judgment/caveats</em> out of the function — a paragraph of “when/why” belongs in a skill or rule, not buried in roxygen. Roxygen documents <em>what it does</em>, not <em>when to use it</em>.</li>
 <li>If you find yourself wanting to hand-write a mechanic inside a skill or analysis, it belongs <strong>here</strong> instead.</li>
 </ul><p><code>ROADMAP.md</code> lists planned functions grouped by analysis stage; each group maps to a home skill (data-preparation, analysis-design, statistical-critique, simulation-study, prediction-eval, …). Keep <code>ROADMAP.md</code> and the marketplace’s <code>docs/design-philosophy.md</code> in sync (that doc holds the full complementarity map).</p>
+<p><strong>Build order is demand-driven, not roadmap order</strong> (decision 2026-07-04, see <code>memos/decisions.md</code>): ROADMAP sections 9-12 are the verification gates that make agent-delegated analyses auditable — implement a function when a real analysis or its home skill needs the gate. Cross-repo strategy: <code>biostat-support/docs/north-star.md</code>.</p>
 </div>
 <div class="section level2">
 <h2 id="package-discipline-non-negotiable">Package discipline (non-negotiable)<a class="anchor" aria-label="anchor" href="#package-discipline-non-negotiable"></a></h2>

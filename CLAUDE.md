@@ -34,6 +34,12 @@ statistical-critique, simulation-study, prediction-eval, …). Keep
 `ROADMAP.md` and the marketplace’s `docs/design-philosophy.md` in sync
 (that doc holds the full complementarity map).
 
+**Build order is demand-driven, not roadmap order** (decision
+2026-07-04, see `memos/decisions.md`): ROADMAP sections 9-12 are the
+verification gates that make agent-delegated analyses auditable —
+implement a function when a real analysis or its home skill needs the
+gate. Cross-repo strategy: `biostat-support/docs/north-star.md`.
+
 ## Package discipline (non-negotiable)
 
 - **`DESCRIPTION`:** `Authors@R` only (no redundant
