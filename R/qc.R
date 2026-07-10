@@ -97,21 +97,25 @@ check_colnames <- function(data) {
 
 #' Clean column names to snake_case
 #'
-#' Splits camelCase, lower-cases, replaces runs of non-alphanumeric characters
-#' with `_`, trims, and de-duplicates. The before/after map is attached as the
-#' `"colname_map"` attribute.
+#' Wraps [janitor::make_clean_names()] to convert names to snake_case:
+#' transliterates non-ASCII characters, splits camelCase, replaces runs of
+#' non-alphanumeric characters with `_`, lower-cases, and de-duplicates with a
+#' numeric suffix. The before/after map is attached as the `"colname_map"`
+#' attribute.
 #'
 #' @param data A data frame.
-#' @return `data` with cleaned names and a `"colname_map"` attribute.
+#' @return `data` with cleaned names and a `"colname_map"` attribute (a data
+#'   frame with `old` and `new` columns).
 #' @export
 clean_colnames <- function(data) {
+  if (!requireNamespace("janitor", quietly = TRUE)) {
+    cli::cli_abort(c(
+      "The {.pkg janitor} package is required to clean column names.",
+      i = 'Install it with {.run install.packages("janitor")}.'
+    ))
+  }
   old <- names(data)
-  new <- gsub("([a-z0-9])([A-Z])", "\\1_\\2", old)
-  new <- tolower(new)
-  new <- gsub("[^a-z0-9]+", "_", new)
-  new <- gsub("_+", "_", new)
-  new <- gsub("^_|_$", "", new)
-  new <- make.unique(new, sep = "_")
+  new <- janitor::make_clean_names(old, case = "snake")
   names(data) <- new
   if (any(old != new)) cli::cli_inform("Renamed {sum(old != new)} column{?s}.")
   attr(data, "colname_map") <- data.frame(old = old, new = new, stringsAsFactors = FALSE)

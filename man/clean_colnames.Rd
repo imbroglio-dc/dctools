@@ -10,10 +10,13 @@ clean_colnames(data)
 \item{data}{A data frame.}
 }
 \value{
-\code{data} with cleaned names and a \code{"colname_map"} attribute.
+\code{data} with cleaned names and a \code{"colname_map"} attribute (a data
+frame with \code{old} and \code{new} columns).
 }
 \description{
-Splits camelCase, lower-cases, replaces runs of non-alphanumeric characters
-with \verb{_}, trims, and de-duplicates. The before/after map is attached as the
-\code{"colname_map"} attribute.
+Wraps \code{\link[janitor:make_clean_names]{janitor::make_clean_names()}} to convert names to snake_case:
+transliterates non-ASCII characters, splits camelCase, replaces runs of
+non-alphanumeric characters with \verb{_}, lower-cases, and de-duplicates with a
+numeric suffix. The before/after map is attached as the \code{"colname_map"}
+attribute.
 }

@@ -37,6 +37,7 @@ Suggests:
     crew,
     dbplyr,
     gtsummary,
+    janitor,
     knitr,
     ps,
     renv,
