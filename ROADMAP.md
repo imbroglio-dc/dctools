@@ -7,6 +7,7 @@ for large data; base R where it keeps dependencies low.
 ## 1. Ingestion & typing
 - [x] `check_types()` — text-as-numeric/date, logical-as-text, high-cardinality, binary-as-numeric
 - [x] `check_colnames()` / `clean_colnames()` — non-syntactic, dupes, case-collisions, spaces
+- [x] refactor `clean_colnames()` to wrap `janitor::make_clean_names()` (more robust than the hand-rolled gsub chain) while keeping the `colname_map` before/after attribute; `check_colnames()` stays custom (report-only). `janitor` in Suggests, guarded (errors if absent) - see `memos/decisions.md` 2026-07-10.
 - [ ] `coerce_types(data, spec)` — apply a declarative/codebook type spec, report coercions + NAs introduced
 - [ ] `read_any(path)` — extension dispatch (csv/xlsx/sas7bdat/dta/parquet/rds) + encoding/locale guard
 

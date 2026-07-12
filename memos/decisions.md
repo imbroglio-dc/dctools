@@ -6,6 +6,32 @@ forks, dependency choices. Tooling friction goes in `workflow-feedback.md`, not 
 
 Add entries with `/log-decision`, or by hand using the template below.
 
+## 2026-07-10 — `clean_colnames()` wraps `janitor::make_clean_names()`; janitor in Suggests
+
+**Decision:** Refactor `clean_colnames()` to delegate name cleaning to
+`janitor::make_clean_names(case = "snake")` instead of the hand-rolled `gsub` chain.
+`janitor` goes in **`Suggests`**, not `Imports`. When it is not installed,
+`clean_colnames()` **errors** with an install hint (`cli::cli_abort`) rather than falling
+back to the old chain. The `"colname_map"` before/after attribute and the "Renamed N
+columns" message are preserved. `check_colnames()` stays custom (report-only, no janitor
+equivalent).
+
+**Why:** `make_clean_names()` handles transliteration, non-ASCII, and de-duplication more
+robustly than the gsub chain (ROADMAP section 1). But janitor pulls **8 packages** not
+already in the dctools tree - including the heavy compiled `stringi` and `lubridate` -
+so the "heavy/optional -> Suggests + `requireNamespace()` guard" convention (CLAUDE.md)
+applies. Erroring rather than falling back keeps output **deterministic across
+environments**: a QC/reproducibility tool must not emit a different `colname_map`
+depending on whether a Suggested package happens to be installed, and a silent fallback
+would route users to the *less* robust algorithm the refactor set out to retire.
+
+**Alternatives rejected:** `janitor` in `Imports` (hard dependency; forces stringi +
+lubridate on every install, against the low-dependency lean). Suggests + silent fallback
+to the gsub chain (non-deterministic output across machines; defeats the robustness goal).
+
+**Links:** `ROADMAP.md` section 1; `R/qc.R` `clean_colnames()`; branch
+`roadmap-janitor-clean-colnames`.
+
 ## 2026-07-04 — ROADMAP sections 9-12 reframed as delegation gates; demand-driven build
 
 **Decision:** The unbuilt ROADMAP groups (section 9 model-assumption diagnostics, 10

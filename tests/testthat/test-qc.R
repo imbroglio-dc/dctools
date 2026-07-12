@@ -26,12 +26,25 @@ test_that("check_colnames flags duplicates, spaces, case-collisions", {
 })
 
 test_that("clean_colnames produces unique snake_case and records a map", {
+  skip_if_not_installed("janitor")
   df <- data.frame(1, 2, 3)
   names(df) <- c("Patient ID", "patientID", "WBC (k/uL)")
   out <- clean_colnames(df)
   expect_false(any(duplicated(names(out))))
   expect_true(all(grepl("^[a-z0-9_]+$", names(out))))
   expect_s3_class(attr(out, "colname_map"), "data.frame")
+})
+
+test_that("clean_colnames delegates to janitor::make_clean_names", {
+  skip_if_not_installed("janitor")
+  df <- data.frame(1, 2, 3)
+  names(df) <- c("Patient ID", "patientID", "WBC (k/uL)")
+  out <- clean_colnames(df)
+  # janitor de-duplicates with a numeric suffix (_2), unlike the retired gsub chain (_1)
+  expect_identical(names(out), c("patient_id", "patient_id_2", "wbc_k_u_l"))
+  map <- attr(out, "colname_map")
+  expect_identical(map$old, c("Patient ID", "patientID", "WBC (k/uL)"))
+  expect_identical(map$new, c("patient_id", "patient_id_2", "wbc_k_u_l"))
 })
 
 test_that("check_types flags numeric-as-text and binary-as-numeric", {
