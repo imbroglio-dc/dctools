@@ -16,6 +16,16 @@ binary-as-numeric
 [`clean_colnames()`](https://imbroglio-dc.github.io/helpers/reference/clean_colnames.md)
 — non-syntactic, dupes, case-collisions, spaces
 
+refactor
+[`clean_colnames()`](https://imbroglio-dc.github.io/helpers/reference/clean_colnames.md)
+to wrap
+[`janitor::make_clean_names()`](https://sfirke.github.io/janitor/reference/make_clean_names.html)
+(more robust than the hand-rolled gsub chain) while keeping the
+`colname_map` before/after attribute;
+[`check_colnames()`](https://imbroglio-dc.github.io/helpers/reference/check_colnames.md)
+stays custom (report-only). `janitor` in Suggests, guarded (errors if
+absent) - see `memos/decisions.md` 2026-07-10.
+
 `coerce_types(data, spec)` — apply a declarative/codebook type spec,
 report coercions + NAs introduced
 

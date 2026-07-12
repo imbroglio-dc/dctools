@@ -27,6 +27,12 @@ Keep `ROADMAP.md` in sync with the marketplace’s
 
 ## Recent progress
 
+- 2026-07-10 -
+  [`clean_colnames()`](https://imbroglio-dc.github.io/helpers/reference/clean_colnames.md)
+  refactored to wrap
+  [`janitor::make_clean_names()`](https://sfirke.github.io/janitor/reference/make_clean_names.html)
+  (janitor in Suggests, guarded); ROADMAP section 1 item closed;
+  `check()` clean.
 - 2026-07-04 - ROADMAP sections 9-12 reframed as delegation gates;
   demand-driven build order adopted (`memos/decisions.md`); `PROJECT.md`
   deployed as the status home.

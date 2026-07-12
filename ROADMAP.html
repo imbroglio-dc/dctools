@@ -39,6 +39,7 @@
 <h2 id="id_1-ingestion--typing">1. Ingestion &amp; typing<a class="anchor" aria-label="anchor" href="#id_1-ingestion--typing"></a></h2>
 <ul class="task-list"><li><label><input type="checkbox" checked><code><a href="reference/check_types.html">check_types()</a></code> — text-as-numeric/date, logical-as-text, high-cardinality, binary-as-numeric</label></li>
 <li><label><input type="checkbox" checked><code><a href="reference/check_colnames.html">check_colnames()</a></code> / <code><a href="reference/clean_colnames.html">clean_colnames()</a></code> — non-syntactic, dupes, case-collisions, spaces</label></li>
+<li><label><input type="checkbox" checked>refactor <code><a href="reference/clean_colnames.html">clean_colnames()</a></code> to wrap <code><a href="https://sfirke.github.io/janitor/reference/make_clean_names.html" class="external-link">janitor::make_clean_names()</a></code> (more robust than the hand-rolled gsub chain) while keeping the <code>colname_map</code> before/after attribute; <code><a href="reference/check_colnames.html">check_colnames()</a></code> stays custom (report-only). <code>janitor</code> in Suggests, guarded (errors if absent) - see <code>memos/decisions.md</code> 2026-07-10.</label></li>
 <li><label><input type="checkbox"><code>coerce_types(data, spec)</code> — apply a declarative/codebook type spec, report coercions + NAs introduced</label></li>
 <li><label><input type="checkbox"><code>read_any(path)</code> — extension dispatch (csv/xlsx/sas7bdat/dta/parquet/rds) + encoding/locale guard</label></li>
 </ul></div>
@@ -136,7 +137,7 @@
 </div>
 
 <div class="pkgdown-footer-right">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.0.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.1.</p>
 </div>
 
     </footer></div>
