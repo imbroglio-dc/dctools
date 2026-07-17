@@ -13,6 +13,10 @@
 * Package & environment helpers: `read_packages()`, `load_packages()`,
   `configure_parallel()`.
 * Data validation: `assert_columns()`, `check_unique_id()`, `flag_out_of_range()`.
+* Join integrity: `join_audit()` — strict-join wrapper that declares the
+  `relationship`/`unmatched`/`na_matches` contract (`na_matches` defaults to
+  `"never"`), returns the joined data with a before/after row-count + match-rate
+  audit trail attached, and warns on row inflation. Home skill: `data-qc`.
 * Data-intake QC: `describe_cohort()`, `detect_missing_sentinels()`,
   `check_colnames()`, `clean_colnames()`, `check_types()`,
   `check_constant_cols()`, `check_collinearity()`.

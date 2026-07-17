@@ -69,3 +69,90 @@ flag_out_of_range <- function(x, lo = -Inf, hi = Inf, label = NULL) {
   }
   invisible(data.frame(index = oor, value = x[oor]))
 }
+
+#' Join with a declared contract and an audit trail
+#'
+#' A strict-join wrapper: runs a dplyr join with the `relationship` /
+#' `unmatched` / `na_matches` contract set explicitly, and returns the joined
+#' data with a before/after row-count and match-rate audit trail attached. It
+#' turns the merge-time failure [check_unique_id()] cannot see — a join that
+#' should be 1:1 but silently inflates rows — into a reported number, or, if you
+#' declare `relationship`, an immediate error.
+#'
+#' `na_matches` defaults to `"never"` (safer than dplyr's `"na"`): two rows with
+#' `NA` keys are not the same entity. For a `left`/`inner` join, a grown row
+#' count is flagged as a warning — the usual sign of duplicate keys on the right.
+#'
+#' @param left,right Data frames to join.
+#' @param by Character vector of key column name(s), present in both frames.
+#' @param type Join type: `"left"` (default), `"inner"`, `"right"`, or `"full"`.
+#' @param relationship,unmatched,na_matches Passed to the underlying dplyr join.
+#'   `relationship` (e.g. `"one-to-one"`, `"many-to-one"`) errors on violation;
+#'   `unmatched` defaults to `"drop"`; `na_matches` defaults to `"never"`.
+#' @param quiet Logical; suppress the audit message (the trail is still attached).
+#' @return The joined data frame, with a one-row audit data frame attached as
+#'   `attr(x, "join_audit")` (columns `type`, `by`, `left_n`, `right_n`,
+#'   `joined_n`, `matched_left`, `unmatched_left`, `unmatched_right`,
+#'   `match_rate`).
+#' @seealso [check_unique_id()] for the single-table key check.
+#' @examples
+#' left <- data.frame(id = 1:3, x = c("a", "b", "c"))
+#' right <- data.frame(id = 1:2, y = c(10, 20))
+#' j <- join_audit(left, right, by = "id")
+#' attr(j, "join_audit")
+#' @export
+join_audit <- function(left, right, by,
+                       type = c("left", "inner", "right", "full"),
+                       relationship = NULL, unmatched = "drop",
+                       na_matches = "never", quiet = FALSE) {
+  type <- match.arg(type)
+  assert_columns(left, by)
+  assert_columns(right, by)
+  left_n <- nrow(left)
+  right_n <- nrow(right)
+
+  join_fn <- switch(type,
+    left = dplyr::left_join, inner = dplyr::inner_join,
+    right = dplyr::right_join, full = dplyr::full_join
+  )
+  joined <- join_fn(left, right,
+    by = by, relationship = relationship,
+    unmatched = unmatched, na_matches = na_matches
+  )
+
+  matched_left <- nrow(
+    dplyr::semi_join(left, right, by = by, na_matches = na_matches)
+  )
+  unmatched_right <- nrow(
+    dplyr::anti_join(right, left, by = by, na_matches = na_matches)
+  )
+  joined_n <- nrow(joined)
+  match_rate <- if (left_n > 0L) matched_left / left_n else NA_real_
+
+  audit <- data.frame(
+    type = type, by = paste(by, collapse = ","),
+    left_n = left_n, right_n = right_n, joined_n = joined_n,
+    matched_left = matched_left, unmatched_left = left_n - matched_left,
+    unmatched_right = unmatched_right, match_rate = match_rate,
+    stringsAsFactors = FALSE
+  )
+  attr(joined, "join_audit") <- audit
+  if (!isTRUE(quiet)) .report_join(audit)
+  joined
+}
+
+.report_join <- function(a) {
+  pct <- if (is.na(a$match_rate)) NA else round(100 * a$match_rate, 1)
+  fanout <- a$type %in% c("left", "inner") && a$joined_n > a$left_n
+  if (isTRUE(fanout)) {
+    cli::cli_warn(c(
+      "join_audit ({a$type}): row count grew {a$left_n} -> {a$joined_n} (duplicate keys on the right?).",
+      "i" = "{pct}% of left keys matched; {a$unmatched_right} right unmatched."
+    ))
+  } else {
+    cli::cli_alert_info(
+      "join_audit ({a$type}): {a$joined_n} rows; {pct}% left match ({a$matched_left}/{a$left_n}); {a$unmatched_left} left / {a$unmatched_right} right unmatched."
+    )
+  }
+  invisible(a)
+}
