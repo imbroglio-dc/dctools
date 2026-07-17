@@ -17,5 +17,10 @@
   `check_colnames()`, `clean_colnames()`, `check_types()`,
   `check_constant_cols()`, `check_collinearity()`.
 * PHI-safe output: `suppress_small_cells()`.
+* Replication / reproducibility: `compare_targets()` — per-target
+  PASS/FAIL/UNMATCHED comparison of computed results against documented targets
+  at kind-based tolerances (integers exact, estimates < 0.01, SEs < 0.05,
+  percentages < 0.1, p-values by significance level). Home skill:
+  `estimation-diagnostics`; also used by the `audit-reproducibility` skill.
 * Clinical formulas: `ckd_epi_2021()`.
 * House plotting / tables: `theme_dc()`, `tbl1()`.
