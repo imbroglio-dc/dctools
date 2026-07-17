@@ -52,6 +52,7 @@ for large data; base R where it keeps dependencies low.
 ## 8. Reproducibility / workflow
 - [ ] `session_fingerprint()` — R version, package versions, seed, git SHA into output/
 - [ ] `tar_template()` helpers — common targets patterns (map-over-outcomes, CV branching)
+- [ ] `compare_targets(results, targets, tolerances)` — replication-target verification: per-target diff vs documented tolerance, PASS/FAIL table; home skill: `estimation-diagnostics` (references/replication.md; external-mining ledger #22). The `audit-reproducibility` skill consumes the same comparison for manuscript claims (#23)
 
 ## 9. Model assumptions & diagnostics (regression / GLM)
 - [ ] `check_residuals(model)` — normality (QQ + Shapiro/KS), homoscedasticity (Breusch-Pagan, scale-location), residual-vs-fitted, autocorrelation (Durbin-Watson)
