@@ -136,6 +136,12 @@ into output/
 `tar_template()` helpers — common targets patterns (map-over-outcomes,
 CV branching)
 
+`compare_targets(results, targets, tolerances)` — replication-target
+verification: per-target diff vs documented tolerance, PASS/FAIL table;
+home skill: `estimation-diagnostics` (references/replication.md;
+external-mining ledger \#22). The `audit-reproducibility` skill consumes
+the same comparison for manuscript claims (#23)
+
 ## 9. Model assumptions & diagnostics (regression / GLM)
 
 `check_residuals(model)` — normality (QQ + Shapiro/KS), homoscedasticity
