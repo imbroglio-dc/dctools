@@ -57,6 +57,7 @@
 <li><label><input type="checkbox" checked><code><a href="reference/describe_cohort.html">describe_cohort()</a></code> — one-call structured QC report (diff across data refreshes)</label></li>
 <li><label><input type="checkbox"><code>validate_schema(data, spec)</code> — codebook-driven: columns + types + ranges + key uniqueness</label></li>
 <li><label><input type="checkbox"><code>check_duplicate_cols(data)</code> — identical content under a different name</label></li>
+<li><label><input type="checkbox"><code>join_audit(left, right, by, relationship)</code> — strict-join wrapper (sets <code>relationship</code>/<code>unmatched</code>/<code>na_matches</code>) + before/after row-count and match-rate audit trail; home skill: <code>data-qc</code> (references/cohort.md §2; external-mining ledger #1)</label></li>
 <li><label><input type="checkbox"><code>check_id_consistency(data, id, time)</code> — panel: ragged IDs, dup (id,time), gaps, non-monotonic</label></li>
 <li><label><input type="checkbox"><code>check_dates(data)</code> — implausible/future dates, end-before-start, DOB/age mismatch</label></li>
 </ul></div>
