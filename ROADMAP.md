@@ -23,7 +23,7 @@ for large data; base R where it keeps dependencies low.
 - [x] `describe_cohort()` — one-call structured QC report (diff across data refreshes)
 - [ ] `validate_schema(data, spec)` — codebook-driven: columns + types + ranges + key uniqueness
 - [ ] `check_duplicate_cols(data)` — identical content under a different name
-- [ ] `join_audit(left, right, by, relationship)` — strict-join wrapper (sets `relationship`/`unmatched`/`na_matches`) + before/after row-count and match-rate audit trail; home skill: `data-qc` (references/cohort.md §2; external-mining ledger #1)
+- [x] `join_audit(left, right, by, relationship)` — strict-join wrapper (declares `relationship`/`unmatched`/`na_matches`, `na_matches` default `"never"`; `type` = left/inner/right/full) + before/after row-count and match-rate audit trail (attached as `attr(., "join_audit")`), warns on row inflation; home skill: `data-qc` (references/cohort.md §2; external-mining ledger #1)
 - [ ] `check_id_consistency(data, id, time)` — panel: ragged IDs, dup (id,time), gaps, non-monotonic
 - [ ] `check_dates(data)` — implausible/future dates, end-before-start, DOB/age mismatch
 
