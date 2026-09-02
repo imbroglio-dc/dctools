@@ -58,6 +58,12 @@ not the decision log.
   verbs); `data.table` only for profiled hot paths.
 - **Naming:** `snake_case` vars/columns; `verb_noun()` functions; `.dot_prefixed` internals.
 - **PHI:** never in code, tests, examples, or fixtures.
+- **Worktrees, not in-place branch switching.** Do each change in an isolated worktree:
+  prefer the harness's native tool (`EnterWorktree`) over `git worktree add`, which creates
+  state the harness can't track. Manual fallback: `.worktrees/<branch>/` (gitignored). This
+  is what lets several agents work at once without racing over one checkout.
+  A fresh worktree carries no installed/built package state, so run
+  `devtools::document()` + `devtools::test()` there before trusting any result.
 
 ## Build / test
 

@@ -26,3 +26,6 @@ Thumbs.db
 
 # Claude local overrides
 .claude/settings.local.json
+
+# git worktrees for parallel agent work
+.worktrees/
