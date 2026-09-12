@@ -31,8 +31,11 @@ Creates a project of one of two archetypes:
 \itemize{
 \item \code{"analysis"} - builds the \verb{code/} + \verb{data/} + \verb{output/} skeleton via
 \code{\link[=make_file_dirs]{make_file_dirs()}} and writes the project mechanics directly (a PHI-aware
-\code{.gitignore}, an \code{renv}-activation \code{.Rprofile}, \verb{<name>.Rproj}, a README
+\code{.gitignore}, an initialised \code{renv} project (lockfile, which records the R
+version, and a guarded activation \code{.Rprofile}), \verb{<name>.Rproj}, a README
 stub, the \verb{memos/} state stack, and an optional \code{targets} pipeline stub).
+If \code{renv} isn't installed, initialisation is skipped with a warning rather
+than failing the scaffold.
 No per-project feedback log is written: feedback about a reusable
 capability (a skill, plugin, or command) belongs in the repo that owns
 that capability (e.g. this package's own \code{workflow-feedback.md}, or

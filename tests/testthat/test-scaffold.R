@@ -60,6 +60,25 @@ test_that("create_project(type = 'analysis') scaffolds offline, no network clone
   expect_false(file.exists(file.path(dest, "_setup.R")))
 })
 
+test_that("create_project(type = 'analysis') initialises renv, whose lockfile pins R", {
+  parent <- withr::local_tempdir()
+  dest <- create_project("renvproj", path = parent, type = "analysis", git = FALSE)
+
+  # The R version pin is renv.lock (checked by renv) + the README line; no
+  # .Rversion, which no tool reads.
+  expect_false(file.exists(file.path(dest, ".Rversion")))
+
+  # .Rprofile stays our guarded activation line, not renv::init()'s bare one
+  rprofile <- paste(readLines(file.path(dest, ".Rprofile")), collapse = "\n")
+  expect_match(rprofile, "if (file.exists", fixed = TRUE)
+
+  skip_if_not_installed("renv")
+  expect_true(file.exists(file.path(dest, "renv", "activate.R")))
+  expect_true(file.exists(file.path(dest, "renv.lock")))
+  lock <- renv::lockfile_read(file.path(dest, "renv.lock"))
+  expect_identical(lock$R$Version, as.character(getRversion()))
+})
+
 test_that("create_project(type = 'analysis', targets = TRUE) writes a pipeline stub", {
   parent <- withr::local_tempdir()
   dest <- create_project("tproj", path = parent, type = "analysis",

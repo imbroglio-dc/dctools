@@ -15,6 +15,9 @@
   `project-setup` skill and safety hooks live in the installed kernel. Removes
   the runtime network dependency (the analysis archetype is now unit-tested) and
   the `template_repo` argument.
+* `create_project(type = "analysis")` now initialises `renv` (skipped with a
+  warning when `renv` isn't installed), so `renv.lock` pins the package and R
+  versions from the start; `.Rprofile` keeps the guarded activation line.
 * Package & environment helpers: `read_packages()`, `load_packages()`,
   `configure_parallel()`.
 * Data validation: `assert_columns()`, `check_unique_id()`, `flag_out_of_range()`.
