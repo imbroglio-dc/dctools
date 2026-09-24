@@ -33,9 +33,9 @@ prediction-eval, …). Keep `ROADMAP.md` and the marketplace's
 `memos/decisions.md`): ROADMAP sections 9-12 are the verification gates that make
 agent-delegated analyses auditable — implement a function when a real analysis or its
 home skill needs the gate. Cross-repo strategy: `biostat-support/docs/north-star.md`.
-**Current focus, next actions, and progress live in `PROJECT.md`** — refresh it
-(`/project-status`) when they change. Tooling friction goes to `workflow-feedback.md`,
-not the decision log.
+**Current focus, next actions, and progress live in `STATUS.md`** — refresh it
+(`/update-status`) when they change; durable orientation lives in `OVERVIEW.md`. Tooling
+friction goes to `workflow-feedback.md`, not the decision log.
 
 ## Package discipline (non-negotiable)
 

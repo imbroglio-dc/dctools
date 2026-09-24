@@ -11,8 +11,9 @@ A personal toolkit of repeated-task helpers for prediction- and causal-inference
 \seealso{
 Useful links:
 \itemize{
-  \item \url{https://github.com/imbroglio-dc/helpers}
-  \item Report bugs at \url{https://github.com/imbroglio-dc/helpers/issues}
+  \item \url{https://github.com/imbroglio-dc/dctools}
+  \item \url{https://imbroglio-dc.github.io/dctools/}
+  \item Report bugs at \url{https://github.com/imbroglio-dc/dctools/issues}
 }
 
 }

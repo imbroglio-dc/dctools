@@ -11,7 +11,8 @@
 ^ROADMAP\.md$
 ^CLAUDE\.md$
 ^memos$
-^PROJECT\.md$
+^OVERVIEW\.md$
+^STATUS\.md$
 ^workflow-feedback\.md$
 ^codecov\.yml$
 ^\.claude$

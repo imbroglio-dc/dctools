@@ -1,4 +1,4 @@
-url: https://imbroglio-dc.github.io/helpers/
+url: https://imbroglio-dc.github.io/dctools/
 
 template:
   bootstrap: 5
@@ -18,6 +18,10 @@ reference:
       - assert_columns
       - check_unique_id
       - flag_out_of_range
+      - join_audit
+  - title: Replication & reproducibility
+    contents:
+      - compare_targets
   - title: Data-intake QC
     contents:
       - describe_cohort

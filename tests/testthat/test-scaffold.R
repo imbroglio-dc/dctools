@@ -16,16 +16,12 @@ test_that("make_file_dirs honours the extra argument and is idempotent", {
   expect_no_error(make_file_dirs(root)) # second run must not fail
 })
 
-test_that(".write_state_stack scaffolds memos/ and a workflow-feedback stub", {
+test_that(".write_state_stack scaffolds memos/ only, no per-project feedback log", {
   root <- withr::local_tempdir()
   dctools:::.write_state_stack(root)
   expect_true(dir.exists(file.path(root, "memos")))
   expect_true(file.exists(file.path(root, "memos", ".gitkeep")))
-  wf <- file.path(root, "workflow-feedback.md")
-  expect_true(file.exists(wf))
-  expect_match(paste(readLines(wf), collapse = "\n"), "Workflow feedback",
-    fixed = TRUE
-  )
+  expect_false(file.exists(file.path(root, "workflow-feedback.md")))
 })
 
 test_that("create_project(type = 'analysis') scaffolds offline, no network clone", {
@@ -55,9 +51,8 @@ test_that("create_project(type = 'analysis') scaffolds offline, no network clone
   # or an LLM session was ever involved
   expect_match(readme, paste0("R version: `", getRversion(), "`"), fixed = TRUE)
 
-  # State stack (Gap 1)
+  # State stack: memos/
   expect_true(dir.exists(file.path(dest, "memos")))
-  expect_true(file.exists(file.path(dest, "workflow-feedback.md")))
 
   # Old-world content is gone (Gap 2): the router + kernel own these now
   expect_false(dir.exists(file.path(dest, ".claude")))
