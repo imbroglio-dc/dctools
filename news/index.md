@@ -8,6 +8,11 @@
   [`create_project()`](https://imbroglio-dc.github.io/dctools/reference/create_project.md)
   (analysis + package archetypes) and
   [`make_file_dirs()`](https://imbroglio-dc.github.io/dctools/reference/make_file_dirs.md).
+- `create_project(type = "analysis")`’s README now pins the R version
+  the scaffold ran under in `## Reproducibility`, with a matching
+  [`rig`](https://github.com/r-lib/rig) command when `rig` is on `PATH`
+  — `renv` pins packages but not the R version itself, and this fires
+  whether or not the project was set up through a Claude session.
 - `create_project(type = "analysis")` now builds the project directly
   instead of cloning an external template: a PHI-aware `.gitignore`,
   `.Rprofile`, `.Rproj`, a README stub, and the `memos/` +
