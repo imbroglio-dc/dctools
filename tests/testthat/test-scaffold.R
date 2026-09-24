@@ -51,6 +51,10 @@ test_that("create_project(type = 'analysis') scaffolds offline, no network clone
   expect_match(readme, "demoproj", fixed = TRUE)
   expect_false(grepl("{{PROJECT_NAME}}", readme, fixed = TRUE))
 
+  # R version pinned in Reproducibility, independent of whether renv::init()
+  # or an LLM session was ever involved
+  expect_match(readme, paste0("R version: `", getRversion(), "`"), fixed = TRUE)
+
   # State stack (Gap 1)
   expect_true(dir.exists(file.path(dest, "memos")))
   expect_true(file.exists(file.path(dest, "workflow-feedback.md")))

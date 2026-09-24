@@ -185,12 +185,31 @@ create_project <- function(name, path = ".", type = c("analysis", "package"),
     "Dependencies are pinned with [`renv`](https://rstudio.github.io/renv/):",
     "`renv::init()` to start, `renv::restore()` after cloning.",
     "",
+    .r_version_pin_line(),
+    "",
     "## PHI constraint",
     "",
     "Never commit, print, or transmit individual-level patient data. `data/raw/`",
     "and `data/processed/` are git-ignored. Suppress table cells with counts",
     "below the project's threshold before any output leaves the project."
   ), fs::path(dest, "README.md"))
+}
+
+#' @keywords internal
+#' @noRd
+.r_version_pin_line <- function() {
+  v <- as.character(getRversion())
+  if (nzchar(Sys.which("rig"))) {
+    sprintf(
+      "R version: `%s`, managed via [`rig`](https://github.com/r-lib/rig) (`rig add %s && rig default %s` to match).",
+      v, v, v
+    )
+  } else {
+    sprintf(
+      "R version: `%s`. Match it with [`rig`](https://github.com/r-lib/rig) (`rig add %s`) or your R version manager of choice.",
+      v, v
+    )
+  }
 }
 
 .write_analysis_gitignore <- function(dest) {
