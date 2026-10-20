@@ -186,7 +186,7 @@ test_that("no debug dir: plain evaluation, errors and warnings pass through", {
 test_that("the debug dir defaults to DCTOOLS_DEBUG_DIR", {
   d <- local_debug_dir()
   withr::local_envvar(DCTOOLS_DEBUG_DIR = d)
-  expect_identical(runner_debug_dir(), d)
+  expect_identical(get_debug_dir(), d)
   expect_error(capture_target_debug(stop("x"), "env"))
   expect_true(file.exists(file.path(d, "env.status.json")))
 })
@@ -243,9 +243,9 @@ test_that("read_debug_status returns the sanitized sidecar, or NULL when absent"
   expect_true(is.na(read_debug_status(d, "p")$code))
 })
 
-test_that("debug_error_sink writes numbered section bundles", {
+test_that("create_debug_sink writes numbered section bundles", {
   d <- local_debug_dir()
-  sink <- debug_error_sink(d, "ev")
+  sink <- create_debug_sink(d, "ev")
   sink(simpleError("one"))
   sink(simpleError("two"))
   expect_true(all(file.exists(file.path(
@@ -254,11 +254,11 @@ test_that("debug_error_sink writes numbered section bundles", {
   ))))
 })
 
-test_that("debug_error_sink refuses a non-private dir and no-ops on an empty one", {
+test_that("create_debug_sink refuses a non-private dir and no-ops on an empty one", {
   root <- withr::local_tempdir()
   expect_error(
-    debug_error_sink(file.path(root, "out"), "ev")(simpleError("x")),
+    create_debug_sink(file.path(root, "out"), "ev")(simpleError("x")),
     class = "dctools_unsafe_path_error"
   )
-  expect_null(debug_error_sink("", "ev")(simpleError("x")))
+  expect_null(create_debug_sink("", "ev")(simpleError("x")))
 })

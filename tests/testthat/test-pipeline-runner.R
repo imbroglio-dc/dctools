@@ -177,10 +177,11 @@ skip_end_to_end <- function() {
 }
 
 # The package source when testing from a checkout (load_all); "" when the
-# tests run against an installed dctools (R CMD check).
+# tests run against an installed dctools (R CMD check, covr). An installed
+# package also has a DESCRIPTION, so look for the R sources themselves.
 dctools_src <- function() {
-  src <- normalizePath(testthat::test_path("..", ".."), mustWork = FALSE)
-  if (file.exists(file.path(src, "DESCRIPTION"))) src else ""
+  src <- getNamespaceInfo(asNamespace("dctools"), "path")
+  if (file.exists(file.path(src, "R", "pipeline.R"))) src else ""
 }
 
 load_dctools_line <- paste0(
@@ -234,8 +235,9 @@ make_toy_project <- function(env = parent.frame()) {
   proj
 }
 
+# stdout/stderr with "\r\n" (Windows) normalized to "\n".
 run_shim <- function(proj, args = character(0), fail = FALSE) {
-  processx::run(
+  res <- processx::run(
     file.path(R.home("bin"), "Rscript"),
     c("code/pipeline/run_pipeline_safe.R", args),
     wd = proj,
@@ -247,6 +249,9 @@ run_shim <- function(proj, args = character(0), fail = FALSE) {
       R_LIBS = paste(.libPaths(), collapse = .Platform$path.sep)
     )
   )
+  res$stdout <- gsub("\r\n", "\n", res$stdout, fixed = TRUE)
+  res$stderr <- gsub("\r\n", "\n", res$stderr, fixed = TRUE)
+  res
 }
 
 debug_runs <- function(proj) {
