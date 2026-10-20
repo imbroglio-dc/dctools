@@ -34,6 +34,14 @@ reference:
   - title: PHI-safe output
     contents:
       - suppress_small_cells
+  - title: Disclosure-safe targets pipelines
+    contents:
+      - run_targets_safe
+      - capture_target_debug
+      - abort_safe
+      - debug_error_sink
+      - read_debug_status
+      - runner_debug_dir
   - title: Clinical formulas
     contents:
       - ckd_epi_2021

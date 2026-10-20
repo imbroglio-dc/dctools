@@ -52,6 +52,7 @@ for large data; base R where it keeps dependencies low.
 
 ## 8. Reproducibility / workflow
 - [ ] `session_fingerprint()` — R version, package versions, seed, git SHA into output/
+- [x] `run_targets_safe()` + `capture_target_debug()` / `abort_safe()` / `debug_error_sink()` / `read_debug_status()` — disclosure-safe targets runner: `tar_make()` with all output diverted to a per-run debug dir under `data/processed/`, stdout limited to an allowlist (progress, pattern-checked error codes, masked counts, caller-owned run-status lines); exit 0/1/2. Generalized from sepsis_burn's `run_pipeline_safe.R`. Home skill: TBD. Constraint: the PHI hooks (`githook_lib.PIPELINE_RUNNER` / `PIPELINE_DEBUG`) recognise the runner only as `Rscript code/pipeline/run_pipeline_safe.R` with debug output in `data/processed/debug/`, so an adopting project keeps a shim script at that path and the default `debug_root`
 - [ ] `tar_template()` helpers — common targets patterns (map-over-outcomes, CV branching)
 - [x] `compare_targets(results, targets, tolerances)` — replication-target verification: per-target diff vs documented tolerance, PASS/FAIL/UNMATCHED table; kind-based tolerances (integers exact, estimates < 0.01, SEs < 0.05, percentages < 0.1, p-values by significance level), per-row override, named-vector or data-frame results. Home skill: `estimation-diagnostics` (references/replication.md; external-mining ledger #22). The `audit-reproducibility` skill consumes the same comparison for manuscript claims (#23)
 

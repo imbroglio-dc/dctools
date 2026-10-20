@@ -26,6 +26,14 @@
   `check_colnames()`, `clean_colnames()`, `check_types()`,
   `check_constant_cols()`, `check_collinearity()`.
 * PHI-safe output: `suppress_small_cells()`.
+* Disclosure-safe targets pipelines: `run_targets_safe()` runs `tar_make()` with
+  every byte of pipeline output sent to `data/processed/debug/<run_id>/` and prints
+  only an allowlist (target progress, pattern-checked error codes, small counts
+  masked, caller-owned run-status lines), exiting 0/1/2. Inside targets,
+  `capture_target_debug()` writes full error detail to a private bundle plus a
+  pattern-checked status sidecar; `abort_safe()` raises errors whose code and
+  counts may be printed; `debug_error_sink()` and `read_debug_status()` round it
+  out. Generalized from sepsis_burn's safe runner.
 * Replication / reproducibility: `compare_targets()` — per-target
   PASS/FAIL/UNMATCHED comparison of computed results against documented targets
   at kind-based tolerances (integers exact, estimates < 0.01, SEs < 0.05,
