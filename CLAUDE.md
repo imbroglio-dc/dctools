@@ -49,7 +49,7 @@ friction goes to `workflow-feedback.md`, not the decision log.
   plain ASCII — no em-dashes/accents in `R/`).
 - **After any roxygen/export change:** run `devtools::document()` (regenerates `man/` +
   `NAMESPACE`), then `devtools::test()` and `devtools::check()` — must pass clean. CI runs
-  R-CMD-check + coverage + pkgdown and errors on warnings.
+  R-CMD-check (errors on warnings); see `## Conventions` for when the other workflows run.
 - **Format** with Air (`air format .`; config in `air.toml`).
 
 ## Conventions
@@ -60,6 +60,8 @@ friction goes to `workflow-feedback.md`, not the decision log.
   Objects are nouns, functions are verbs: a constructor is `create_report()`, never
   `report_new()` or a `noun_verb()` family prefix.
 - **PHI:** never in code, tests, examples, or fixtures.
+- **CI:** only R-CMD-check runs on every push and PR. pkgdown and test-coverage run only on
+  major-version releases (tags `vX.0.0`) or by hand (`workflow_dispatch`).
 - **Worktrees, not in-place branch switching.** Do each change in an isolated worktree:
   prefer the harness's native tool (`EnterWorktree`) over `git worktree add`, which creates
   state the harness can't track. Manual fallback: `.worktrees/<branch>/` (gitignored). This
