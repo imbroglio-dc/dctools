@@ -57,6 +57,8 @@ friction goes to `workflow-feedback.md`, not the decision log.
 - **Data manipulation:** `dplyr` surface grammar; `arrow`/`dbplyr` for large data (same
   verbs); `data.table` only for profiled hot paths.
 - **Naming:** `snake_case` vars/columns; `verb_noun()` functions; `.dot_prefixed` internals.
+  Objects are nouns, functions are verbs: a constructor is `create_report()`, never
+  `report_new()` or a `noun_verb()` family prefix.
 - **PHI:** never in code, tests, examples, or fixtures.
 - **Worktrees, not in-place branch switching.** Do each change in an isolated worktree:
   prefer the harness's native tool (`EnterWorktree`) over `git worktree add`, which creates
