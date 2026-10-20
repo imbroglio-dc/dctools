@@ -7,7 +7,7 @@
 capture_target_debug(
   expr,
   target_name,
-  debug_dir = runner_debug_dir(),
+  debug_dir = get_debug_dir(),
   safe_class = "dctools_safe_error",
   private_root = "data/processed"
 )
@@ -17,7 +17,7 @@ capture_target_debug(
 
 \item{target_name}{The target's name (an identifier); names the files.}
 
-\item{debug_dir}{The debug directory. Defaults to \code{\link[=runner_debug_dir]{runner_debug_dir()}}.}
+\item{debug_dir}{The debug directory. Defaults to \code{\link[=get_debug_dir]{get_debug_dir()}}.}
 
 \item{safe_class}{The condition class whose \code{code}/\code{counts}/\code{context} may be
 copied into the sidecar.}

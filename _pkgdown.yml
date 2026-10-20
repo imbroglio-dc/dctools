@@ -39,9 +39,9 @@ reference:
       - run_targets_safe
       - capture_target_debug
       - abort_safe
-      - debug_error_sink
+      - create_debug_sink
       - read_debug_status
-      - runner_debug_dir
+      - get_debug_dir
   - title: Clinical formulas
     contents:
       - ckd_epi_2021

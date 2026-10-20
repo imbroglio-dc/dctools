@@ -35,7 +35,7 @@
   masked, caller-owned run-status lines), exiting 0/1/2. Inside targets,
   `capture_target_debug()` writes full error detail to a private bundle plus a
   pattern-checked status sidecar; `abort_safe()` raises errors whose code and
-  counts may be printed; `debug_error_sink()` and `read_debug_status()` round it
+  counts may be printed; `create_debug_sink()` and `read_debug_status()` round it
   out. Generalized from sepsis_burn's safe runner.
 * Replication / reproducibility: `compare_targets()` — per-target
   PASS/FAIL/UNMATCHED comparison of computed results against documented targets

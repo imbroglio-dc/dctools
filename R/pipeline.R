@@ -262,9 +262,9 @@ abort_safe <- function(
 #'   (e.g. a plain `targets::tar_make()`).
 #' @seealso [capture_target_debug()].
 #' @examples
-#' runner_debug_dir()
+#' get_debug_dir()
 #' @export
-runner_debug_dir <- function() Sys.getenv("DCTOOLS_DEBUG_DIR")
+get_debug_dir <- function() Sys.getenv("DCTOOLS_DEBUG_DIR")
 
 #' Capture a target's errors and warnings into a private debug directory
 #'
@@ -287,7 +287,7 @@ runner_debug_dir <- function() Sys.getenv("DCTOOLS_DEBUG_DIR")
 #'
 #' @param expr The target's command.
 #' @param target_name The target's name (an identifier); names the files.
-#' @param debug_dir The debug directory. Defaults to [runner_debug_dir()].
+#' @param debug_dir The debug directory. Defaults to [get_debug_dir()].
 #' @param safe_class The condition class whose `code`/`counts`/`context` may be
 #'   copied into the sidecar.
 #' @param private_root A path segment the debug directory must lie under
@@ -305,7 +305,7 @@ runner_debug_dir <- function() Sys.getenv("DCTOOLS_DEBUG_DIR")
 capture_target_debug <- function(
   expr,
   target_name,
-  debug_dir = runner_debug_dir(),
+  debug_dir = get_debug_dir(),
   safe_class = "dctools_safe_error",
   private_root = "data/processed"
 ) {
@@ -386,10 +386,10 @@ capture_target_debug <- function(
 #' @seealso [capture_target_debug()].
 #' @examples
 #' dir <- file.path(tempdir(), "data", "processed", "debug", "example")
-#' sink <- debug_error_sink(dir, "report")
+#' sink <- create_debug_sink(dir, "report")
 #' tryCatch(stop("section failed"), error = sink)
 #' @export
-debug_error_sink <- function(
+create_debug_sink <- function(
   debug_dir,
   target_name,
   private_root = "data/processed"
