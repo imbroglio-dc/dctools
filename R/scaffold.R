@@ -37,8 +37,11 @@ make_file_dirs <- function(path = ".", code = TRUE, data = TRUE, output = TRUE,
 #' Creates a project of one of two archetypes:
 #' * `"analysis"` - builds the `code/` + `data/` + `output/` skeleton via
 #'   [make_file_dirs()] and writes the project mechanics directly (a PHI-aware
-#'   `.gitignore`, an `renv`-activation `.Rprofile`, `<name>.Rproj`, a README
+#'   `.gitignore`, an initialised `renv` project (lockfile, which records the R
+#'   version, and a guarded activation `.Rprofile`), `<name>.Rproj`, a README
 #'   stub, the `memos/` state stack, and an optional `targets` pipeline stub).
+#'   If `renv` isn't installed, initialisation is skipped with a warning rather
+#'   than failing the scaffold.
 #'   No per-project feedback log is written: feedback about a reusable
 #'   capability (a skill, plugin, or command) belongs in the repo that owns
 #'   that capability (e.g. this package's own `workflow-feedback.md`, or
@@ -84,7 +87,8 @@ create_project <- function(name, path = ".", type = c("analysis", "package"),
 .create_analysis_project <- function(name, dest, targets, git) {
   make_file_dirs(dest) # code/ data/ output/ docs/ tests/ skeleton + scratch/
   .write_analysis_gitignore(dest) # PHI-aware; overwrites the scratch-only stub
-  .write_rprofile(dest)
+  .init_renv(dest)
+  .write_rprofile(dest) # overwrites renv::init()'s own .Rprofile with our guarded line
   .write_rproj(dest, name)
   .write_analysis_readme(dest, name)
   .write_state_stack(dest)
@@ -131,6 +135,16 @@ create_project <- function(name, path = ".", type = c("analysis", "package"),
   fs::dir_create(memos)
   keep <- fs::path(memos, ".gitkeep")
   if (!fs::file_exists(keep)) fs::file_create(keep)
+}
+
+.init_renv <- function(dest) {
+  if (!requireNamespace("renv", quietly = TRUE)) {
+    cli::cli_alert_warning(
+      "renv not installed; skipping renv::init() (run it manually later)."
+    )
+    return(invisible(NULL))
+  }
+  .try("renv init", renv::init(project = dest, restart = FALSE, load = FALSE))
 }
 
 .write_rprofile <- function(dest) {
@@ -181,8 +195,10 @@ create_project <- function(name, path = ".", type = c("analysis", "package"),
     "",
     "## Reproducibility",
     "",
-    "Dependencies are pinned with [`renv`](https://rstudio.github.io/renv/):",
-    "`renv::init()` to start, `renv::restore()` after cloning.",
+    "Package versions, and the R version, are pinned in `renv.lock` by",
+    "[`renv`](https://rstudio.github.io/renv/): already initialised - run",
+    "`renv::restore()` after cloning, and `renv::snapshot()` after adding",
+    "dependencies.",
     "",
     .r_version_pin_line(),
     "",
