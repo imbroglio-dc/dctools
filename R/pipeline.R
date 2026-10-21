@@ -23,7 +23,10 @@
 }
 
 .is_safe_name <- function(x) {
-  is.character(x) && length(x) == 1L && !is.na(x) && grepl(.safe_name_pattern, x)
+  is.character(x) &&
+    length(x) == 1L &&
+    !is.na(x) &&
+    grepl(.safe_name_pattern, x)
 }
 
 # `path` must lie under a `private_root` path segment (e.g. ".../data/processed/..."),
@@ -450,9 +453,7 @@ read_debug_status <- function(debug_dir, target_name) {
     s <- list()
   }
   str_or_na <- function(x, pattern) {
-    if (
-      is.character(x) && length(x) == 1L && !is.na(x) && grepl(pattern, x)
-    ) {
+    if (is.character(x) && length(x) == 1L && !is.na(x) && grepl(pattern, x)) {
       x
     } else {
       NA_character_
@@ -500,7 +501,10 @@ read_debug_status <- function(debug_dir, target_name) {
   }
   nms <- args[-1]
   if (!all(grepl(.safe_name_pattern, nms))) {
-    .runner_abort("target names must be identifiers", "dctools_runner_usage_error")
+    .runner_abort(
+      "target names must be identifiers",
+      "dctools_runner_usage_error"
+    )
   }
   nms
 }
@@ -538,7 +542,12 @@ read_debug_status <- function(debug_dir, target_name) {
     if (length(counts)) {
       paste0(
         " ",
-        paste0(names(counts), "=", .mask_count(counts, mask_below), collapse = " ")
+        paste0(
+          names(counts),
+          "=",
+          .mask_count(counts, mask_below),
+          collapse = " "
+        )
       )
     } else {
       ""
@@ -625,6 +634,47 @@ read_debug_status <- function(debug_dir, target_name) {
   )
 }
 
+.check_ledger_config <- function(ledger) {
+  allowed <- c(
+    "dir",
+    "reportable",
+    "links",
+    "extra_inputs",
+    "documents",
+    "records"
+  )
+  if (
+    !is.list(ledger) ||
+      is.null(names(ledger)) ||
+      !all(names(ledger) %in% allowed)
+  ) {
+    .runner_abort(
+      paste0(
+        "ledger must be a named list with elements from: ",
+        paste(allowed, collapse = ", ")
+      ),
+      "dctools_runner_usage_error"
+    )
+  }
+  defaults <- list(
+    dir = "docs/runs",
+    reportable = character(0),
+    extra_inputs = character(0),
+    documents = character(0),
+    records = character(0)
+  )
+  utils::modifyList(defaults, ledger)
+}
+
+.format_audit_summary <- function(result, ledger_file) {
+  c(
+    "== audit ==",
+    sprintf("%s %s: %s", result$check, result$name, result$status),
+    paste0("verdict: ", attr(result, "verdict")),
+    paste0("ledger: ", ledger_file)
+  )
+}
+
 # Exported: the runner -------------------------------------------------------------
 
 #' Run a targets pipeline printing only disclosure-safe output
@@ -681,10 +731,20 @@ read_debug_status <- function(debug_dir, target_name) {
 #'   `<mask_below`.
 #' @param run_id This run's directory name, `YYYYMMDD-HHMMSS`; defaults to
 #'   the current time.
-#' @return The exit status, invisibly: `0L` when every target succeeded,
-#'   `1L` when a target errored, `2L` when the runner itself failed. On a
-#'   runner failure stdout gets only `runner failed: <condition class>`, with
-#'   the detail in `runner.log` when the debug directory could be made.
+#' @param ledger `NULL`, or a named list turning on the run ledger and audit
+#'   (see [write_run_ledger()] and [audit_run()]): `dir` (default
+#'   `"docs/runs"`), `reportable`, `links`, `extra_inputs`, `documents`,
+#'   `records`. With a ledger, a working tree with uncommitted or untracked
+#'   files outside `dir` is refused before the pipeline runs (runner failure
+#'   `dctools_runner_dirty_tree_error`); after the run the ledger is written
+#'   and audited, and stdout gains an `== audit ==` block with one line per
+#'   check, the verdict and the ledger's path.
+#' @return The exit status, invisibly: `0L` when every target succeeded (and,
+#'   with a ledger, the audit passed), `1L` when a target errored, `2L` when
+#'   the runner itself failed, `3L` when no target errored but the audit's
+#'   verdict was not `PASS`. On a runner failure stdout gets only
+#'   `runner failed: <condition class>`, with the detail in `runner.log` when
+#'   the debug directory could be made.
 #' @seealso [capture_target_debug()], [abort_safe()].
 #' @examples
 #' \dontrun{
@@ -700,7 +760,8 @@ run_targets_safe <- function(
   private_root = "data/processed",
   keep = 20L,
   mask_below = 5L,
-  run_id = format(Sys.time(), "%Y%m%d-%H%M%S")
+  run_id = format(Sys.time(), "%Y%m%d-%H%M%S"),
+  ledger = NULL
 ) {
   state <- new.env()
   tryCatch(
@@ -713,7 +774,8 @@ run_targets_safe <- function(
       private_root,
       keep,
       mask_below,
-      run_id
+      run_id,
+      ledger
     ),
     error = function(e) {
       if (!is.null(state$log)) {
@@ -750,10 +812,18 @@ run_targets_safe <- function(
   private_root,
   keep,
   mask_below,
-  run_id
+  run_id,
+  ledger
 ) {
-  if (!is.character(run_id) || length(run_id) != 1L || !grepl(.run_id_pattern, run_id)) {
-    .runner_abort("run_id must look like YYYYMMDD-HHMMSS", "dctools_runner_usage_error")
+  if (
+    !is.character(run_id) ||
+      length(run_id) != 1L ||
+      !grepl(.run_id_pattern, run_id)
+  ) {
+    .runner_abort(
+      "run_id must look like YYYYMMDD-HHMMSS",
+      "dctools_runner_usage_error"
+    )
   }
   .require_private_path(debug_root, private_root)
   debug_dir <- file.path(debug_root, run_id)
@@ -770,6 +840,20 @@ run_targets_safe <- function(
       "format_status must be NULL or a function",
       "dctools_runner_usage_error"
     )
+  }
+  if (!is.null(ledger)) {
+    ledger <- .check_ledger_config(ledger)
+    dirty <- .git_dirty_files(".", ledger$dir)
+    if (length(dirty)) {
+      log_line(
+        "uncommitted or untracked files: ",
+        paste(dirty, collapse = ", ")
+      )
+      .runner_abort(
+        "the working tree has uncommitted changes; commit them before a ledgered run",
+        "dctools_runner_dirty_tree_error"
+      )
+    }
   }
   log_line(
     "run ",
@@ -834,8 +918,27 @@ run_targets_safe <- function(
         mask_below
       )
       cat(out, sep = "\n")
+      status <- if (!made || any(progress$progress == "errored")) 1L else 0L
+      if (!is.null(ledger)) {
+        ledger_file <- write_run_ledger(
+          path = ledger$dir,
+          run_id = run_id,
+          reportable = ledger$reportable,
+          links = ledger$links,
+          extra_inputs = ledger$extra_inputs,
+          documents = ledger$documents,
+          records = ledger$records,
+          requested = selected,
+          exit_code = status
+        )
+        audit <- audit_run(ledger_file)
+        cat(.format_audit_summary(audit, ledger_file), sep = "\n")
+        if (status == 0L && !identical(attr(audit, "verdict"), "PASS")) {
+          status <- 3L
+        }
+      }
       .prune_debug_runs(debug_root, keep = keep)
-      invisible(if (!made || any(progress$progress == "errored")) 1L else 0L)
+      invisible(status)
     },
     warning = function(w) {
       log_line("warning: ", conditionMessage(w))
