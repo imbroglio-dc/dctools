@@ -102,12 +102,14 @@
   NULL
 }
 
-# Whether `srcref` lies in the source of the function running in frame `n`.
-# TRUE when that function has no source references to compare against.
+# Whether `srcref` is verified to lie in the source file and line span of the
+# function running in frame `n`. Fails closed: FALSE when that function has no
+# usable file span to compare against, since the srcref may then point into
+# other code (dctools itself, for a call forced inside run_section()).
 .within_function <- function(srcref, n) {
   fn_srcref <- attr(sys.function(n), "srcref")
   if (is.null(fn_srcref) || is.na(.srcref_path(fn_srcref))) {
-    return(TRUE)
+    return(FALSE)
   }
   identical(.srcref_path(srcref), .srcref_path(fn_srcref)) &&
     srcref[[1]] >= fn_srcref[[1]] &&

@@ -59,3 +59,33 @@ test_that("a constant in an add_line that is itself an argument is not flagged",
   ))
   expect_length(env$build()$unprovenanced, 0L)
 })
+
+test_that("a caller with no source file gets NA location, not the forcing code's", {
+  e <- new.env()
+  eval(
+    parse(
+      text = c(
+        "build <- function(x) {",
+        "  r <- dctools::create_report()",
+        "  dctools::run_section(r, \"S\", dctools::add_line(r, \"v \", x))",
+        "  dctools::run_section(r, \"T\", dctools::record_count(r, \"n\", x))",
+        "  r",
+        "}"
+      ),
+      keep.source = TRUE
+    ),
+    e
+  )
+  r <- e$build(31)
+  expect_length(r$unprovenanced, 1L)
+  p <- r$unprovenanced[[1]]
+  expect_identical(p$file, NA_character_)
+  expect_identical(p$line_start, NA_integer_)
+  expect_identical(p$line_end, NA_integer_)
+  expect_identical(p$code, NA_character_)
+  expect_identical(p$function_name, "build")
+  counts <- r$provenance[["n"]]
+  expect_identical(counts$file, NA_character_)
+  expect_identical(counts$code, NA_character_)
+  expect_identical(counts$line_start, NA_integer_)
+})
