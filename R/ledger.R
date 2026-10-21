@@ -148,10 +148,7 @@
 
 .code_block <- function(repo, ledger_dir) {
   root <- .git_root(repo)
-  exclude <- .repo_relative(
-    normalizePath(ledger_dir, winslash = "/", mustWork = FALSE),
-    root
-  )
+  exclude <- .ledger_dir_in_repo(ledger_dir, repo)
   dirty <- .git_dirty_files(repo, exclude)
   engine <- .dctools_engine()
   list(

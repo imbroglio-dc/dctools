@@ -37,8 +37,13 @@ theme_dc <- function(base_size = 12, base_family = "") {
 #' @param add_p Logical; add a group comparison p-value (default `FALSE`).
 #' @return A `gtsummary` table object.
 #' @export
-tbl1 <- function(data, by = NULL, include = NULL,
-                 add_overall = !is.null(by), add_p = FALSE) {
+tbl1 <- function(
+  data,
+  by = NULL,
+  include = NULL,
+  add_overall = !is.null(by),
+  add_p = FALSE
+) {
   if (!requireNamespace("gtsummary", quietly = TRUE)) {
     cli::cli_abort("{.fn tbl1} requires the {.pkg gtsummary} package.")
   }
@@ -49,10 +54,18 @@ tbl1 <- function(data, by = NULL, include = NULL,
       gtsummary::all_categorical() ~ "{n} ({p}%)"
     )
   )
-  if (!is.null(by)) args$by <- by
-  if (!is.null(include)) args$include <- include
+  if (!is.null(by)) {
+    args$by <- by
+  }
+  if (!is.null(include)) {
+    args$include <- include
+  }
   tbl <- do.call(gtsummary::tbl_summary, args)
-  if (isTRUE(add_overall) && !is.null(by)) tbl <- gtsummary::add_overall(tbl)
-  if (isTRUE(add_p) && !is.null(by)) tbl <- gtsummary::add_p(tbl)
+  if (isTRUE(add_overall) && !is.null(by)) {
+    tbl <- gtsummary::add_overall(tbl)
+  }
+  if (isTRUE(add_p) && !is.null(by)) {
+    tbl <- gtsummary::add_p(tbl)
+  }
   tbl
 }

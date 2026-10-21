@@ -68,6 +68,29 @@
   if (startsWith(path, prefix)) substring(path, nchar(prefix) + 1L) else path
 }
 
+# The ledger directory as a path relative to the repository root, however it
+# was given (relative, "./"-prefixed, absolute) and whether or not it exists
+# yet. The deepest existing ancestor is normalised so symlinks match the root.
+.ledger_dir_in_repo <- function(path, repo = ".") {
+  root <- .git_root(repo)
+  path <- gsub("\\\\", "/", path)
+  if (!.is_absolute(path)) {
+    path <- file.path(getwd(), path)
+  }
+  path <- sub("/+$", "", gsub("/(\\.(/|$))+", "/", path))
+  rest <- character(0)
+  head <- path
+  while (!file.exists(head) && dirname(head) != head) {
+    rest <- c(basename(head), rest)
+    head <- dirname(head)
+  }
+  full <- do.call(
+    file.path,
+    as.list(c(normalizePath(head, winslash = "/"), rest))
+  )
+  .repo_relative(full, root)
+}
+
 .sha256_file <- function(path) {
   if (.is_missing(path) || !file.exists(path) || dir.exists(path)) {
     return(NA_character_)

@@ -55,7 +55,9 @@ check, the verdict and the ledger's path.}
 The exit status, invisibly: \code{0L} when every target succeeded (and,
 with a ledger, the audit passed), \code{1L} when a target errored, \code{2L} when
 the runner itself failed, \code{3L} when no target errored but the audit's
-verdict was not \code{PASS}. On a runner failure stdout gets only
+verdict was not \code{PASS}. When several apply the order of precedence is
+\code{2L} (including a ledger or audit failure after the run), then \code{1L},
+then \code{3L}. On a runner failure stdout gets only
 \verb{runner failed: <condition class>}, with the detail in \code{runner.log} when
 the debug directory could be made.
 }

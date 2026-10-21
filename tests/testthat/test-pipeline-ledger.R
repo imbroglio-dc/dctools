@@ -1,7 +1,7 @@
 # A committed copy of the ledger fixture project with a runner shim that
 # writes and audits a ledger. Under load_all, dctools has no RemoteSha, so C9
 # fails and a clean run exits 3: that is the expected, correct outcome here.
-make_ledger_runner_project <- function(env = parent.frame()) {
+make_ledger_runner_project <- function(dir_expr = NULL, env = parent.frame()) {
   proj <- copy_fixture(env = env)
   unlink(file.path(proj, c("_targets", "docs", "output")), recursive = TRUE)
   dir.create(file.path(proj, "code", "pipeline"), recursive = TRUE)
@@ -11,6 +11,7 @@ make_ledger_runner_project <- function(env = parent.frame()) {
       "quit(status = run_targets_safe(",
       "  commandArgs(trailingOnly = TRUE),",
       "  ledger = list(",
+      if (!is.null(dir_expr)) paste0("    dir = ", dir_expr, ","),
       "    reportable = 'evidence',",
       "    links = data.frame(decision_id = 'D1', decision_status = 'decided',",
       "                       target = 'values', role = 'args'),",
@@ -77,4 +78,36 @@ test_that(".check_ledger_config fills defaults and rejects unknown elements", {
     .check_ledger_config("docs"),
     class = "dctools_runner_usage_error"
   )
+})
+
+test_that("an absolute ledger dir does not make the next run refuse the previous ledger", {
+  skip_ledger_fixture()
+  proj <- make_ledger_runner_project("file.path(getwd(), 'docs/runs')")
+  first <- run_rscript(proj, "code/pipeline/run_pipeline_safe.R")
+  expect_identical(first$status, 3L, info = first$stdout)
+  Sys.sleep(1.1)
+  second <- run_rscript(proj, "code/pipeline/run_pipeline_safe.R")
+  expect_identical(second$status, 3L, info = second$stdout)
+  expect_length(
+    grep("\\.json$", list.files(file.path(proj, "docs", "runs"))),
+    2L
+  )
+})
+
+test_that(".ledger_dir_in_repo gives the repo-relative dir for every spelling", {
+  skip_ledger_fixture()
+  proj <- copy_fixture()
+  old <- setwd(proj)
+  on.exit(setwd(old), add = TRUE)
+  expect_identical(.ledger_dir_in_repo("docs/runs", "."), "docs/runs")
+  expect_identical(.ledger_dir_in_repo("./docs/runs", "."), "docs/runs")
+  expect_identical(.ledger_dir_in_repo("docs/runs/", "."), "docs/runs")
+  expect_identical(
+    .ledger_dir_in_repo(file.path(getwd(), "docs/runs"), "."),
+    "docs/runs"
+  )
+  expect_identical(.ledger_dir_in_repo("new/deeper/dir", "."), "new/deeper/dir")
+  dir.create("sub")
+  setwd("sub")
+  expect_identical(.ledger_dir_in_repo("../docs/runs", ".."), "docs/runs")
 })

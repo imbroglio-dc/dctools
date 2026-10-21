@@ -38,7 +38,11 @@ assert_columns <- function(data, cols) {
 #' @export
 check_unique_id <- function(data, id, error = TRUE) {
   assert_columns(data, id)
-  counts <- dplyr::count(data, dplyr::across(dplyr::all_of(id)), name = "n_rows")
+  counts <- dplyr::count(
+    data,
+    dplyr::across(dplyr::all_of(id)),
+    name = "n_rows"
+  )
   dupes <- counts[counts[["n_rows"]] > 1L, , drop = FALSE]
   if (nrow(dupes) > 0L) {
     msg <- "{.arg id} ({.val {id}}) does not uniquely identify rows: {nrow(dupes)} duplicated key{?s}."
@@ -101,23 +105,36 @@ flag_out_of_range <- function(x, lo = -Inf, hi = Inf, label = NULL) {
 #' j <- join_audit(left, right, by = "id")
 #' attr(j, "join_audit")
 #' @export
-join_audit <- function(left, right, by,
-                       type = c("left", "inner", "right", "full"),
-                       relationship = NULL, unmatched = "drop",
-                       na_matches = "never", quiet = FALSE) {
+join_audit <- function(
+  left,
+  right,
+  by,
+  type = c("left", "inner", "right", "full"),
+  relationship = NULL,
+  unmatched = "drop",
+  na_matches = "never",
+  quiet = FALSE
+) {
   type <- match.arg(type)
   assert_columns(left, by)
   assert_columns(right, by)
   left_n <- nrow(left)
   right_n <- nrow(right)
 
-  join_fn <- switch(type,
-    left = dplyr::left_join, inner = dplyr::inner_join,
-    right = dplyr::right_join, full = dplyr::full_join
+  join_fn <- switch(
+    type,
+    left = dplyr::left_join,
+    inner = dplyr::inner_join,
+    right = dplyr::right_join,
+    full = dplyr::full_join
   )
-  joined <- join_fn(left, right,
-    by = by, relationship = relationship,
-    unmatched = unmatched, na_matches = na_matches
+  joined <- join_fn(
+    left,
+    right,
+    by = by,
+    relationship = relationship,
+    unmatched = unmatched,
+    na_matches = na_matches
   )
 
   matched_left <- nrow(
@@ -130,14 +147,21 @@ join_audit <- function(left, right, by,
   match_rate <- if (left_n > 0L) matched_left / left_n else NA_real_
 
   audit <- data.frame(
-    type = type, by = paste(by, collapse = ","),
-    left_n = left_n, right_n = right_n, joined_n = joined_n,
-    matched_left = matched_left, unmatched_left = left_n - matched_left,
-    unmatched_right = unmatched_right, match_rate = match_rate,
+    type = type,
+    by = paste(by, collapse = ","),
+    left_n = left_n,
+    right_n = right_n,
+    joined_n = joined_n,
+    matched_left = matched_left,
+    unmatched_left = left_n - matched_left,
+    unmatched_right = unmatched_right,
+    match_rate = match_rate,
     stringsAsFactors = FALSE
   )
   attr(joined, "join_audit") <- audit
-  if (!isTRUE(quiet)) .report_join(audit)
+  if (!isTRUE(quiet)) {
+    .report_join(audit)
+  }
   joined
 }
 

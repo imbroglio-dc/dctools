@@ -742,7 +742,9 @@ read_debug_status <- function(debug_dir, target_name) {
 #' @return The exit status, invisibly: `0L` when every target succeeded (and,
 #'   with a ledger, the audit passed), `1L` when a target errored, `2L` when
 #'   the runner itself failed, `3L` when no target errored but the audit's
-#'   verdict was not `PASS`. On a runner failure stdout gets only
+#'   verdict was not `PASS`. When several apply the order of precedence is
+#'   `2L` (including a ledger or audit failure after the run), then `1L`,
+#'   then `3L`. On a runner failure stdout gets only
 #'   `runner failed: <condition class>`, with the detail in `runner.log` when
 #'   the debug directory could be made.
 #' @seealso [capture_target_debug()], [abort_safe()].
@@ -843,7 +845,7 @@ run_targets_safe <- function(
   }
   if (!is.null(ledger)) {
     ledger <- .check_ledger_config(ledger)
-    dirty <- .git_dirty_files(".", ledger$dir)
+    dirty <- .git_dirty_files(".", .ledger_dir_in_repo(ledger$dir, "."))
     if (length(dirty)) {
       log_line(
         "uncommitted or untracked files: ",
@@ -929,6 +931,7 @@ run_targets_safe <- function(
           documents = ledger$documents,
           records = ledger$records,
           requested = selected,
+          # the status before the audit: the audit's verdict is not part of it
           exit_code = status
         )
         audit <- audit_run(ledger_file)

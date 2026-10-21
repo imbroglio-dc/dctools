@@ -15,23 +15,41 @@
 #' @return A data frame with one row per column/sentinel found: `column`,
 #'   `type`, `sentinel`, `n`, `prop`.
 #' @export
-detect_missing_sentinels <- function(data,
-                                     numeric_codes = c(-9, -99, -999, -9999, 99, 999, 9999),
-                                     string_tokens = c("", "NA", "N/A", ".", "null", "none",
-                                                       "missing", "unknown", "-", "--"),
-                                     ignore_case = TRUE) {
+detect_missing_sentinels <- function(
+  data,
+  numeric_codes = c(-9, -99, -999, -9999, 99, 999, 9999),
+  string_tokens = c(
+    "",
+    "NA",
+    "N/A",
+    ".",
+    "null",
+    "none",
+    "missing",
+    "unknown",
+    "-",
+    "--"
+  ),
+  ignore_case = TRUE
+) {
   out <- list()
   for (col in names(data)) {
     v <- data[[col]]
     n <- length(v)
-    if (n == 0L) next
+    if (n == 0L) {
+      next
+    }
     if (is.numeric(v)) {
       for (code in numeric_codes) {
         cnt <- sum(v == code, na.rm = TRUE)
         if (cnt > 0L) {
           out[[length(out) + 1L]] <- data.frame(
-            column = col, type = "numeric", sentinel = as.character(code),
-            n = cnt, prop = cnt / n, stringsAsFactors = FALSE
+            column = col,
+            type = "numeric",
+            sentinel = as.character(code),
+            n = cnt,
+            prop = cnt / n,
+            stringsAsFactors = FALSE
           )
         }
       }
@@ -46,16 +64,25 @@ detect_missing_sentinels <- function(data,
         cnt <- sum(!is.na(cmp) & cmp == toks[i])
         if (cnt > 0L) {
           out[[length(out) + 1L]] <- data.frame(
-            column = col, type = "character", sentinel = string_tokens[i],
-            n = cnt, prop = cnt / n, stringsAsFactors = FALSE
+            column = col,
+            type = "character",
+            sentinel = string_tokens[i],
+            n = cnt,
+            prop = cnt / n,
+            stringsAsFactors = FALSE
           )
         }
       }
     }
   }
   if (length(out) == 0L) {
-    return(data.frame(column = character(), type = character(),
-                      sentinel = character(), n = integer(), prop = double()))
+    return(data.frame(
+      column = character(),
+      type = character(),
+      sentinel = character(),
+      n = integer(),
+      prop = double()
+    ))
   }
   do.call(rbind, out)
 }
@@ -78,20 +105,38 @@ check_colnames <- function(data) {
   for (i in seq_along(nm)) {
     x <- nm[i]
     iss <- character(0)
-    if (is.na(x) || x == "") iss <- c(iss, "empty")
-    if (!is.na(x) && nzchar(x) && x != make.names(x)) iss <- c(iss, "non-syntactic")
-    if (!is.na(x) && grepl("\\s", x)) iss <- c(iss, "whitespace")
-    if (!is.na(x) && x != trimws(x)) iss <- c(iss, "leading/trailing space")
-    if (!is.na(x) && grepl("[^\\x01-\\x7F]", x, perl = TRUE)) iss <- c(iss, "non-ASCII")
-    if (sum(nm == x) > 1L) iss <- c(iss, "duplicated")
-    if (case_dup[i] && sum(nm == x) == 1L) iss <- c(iss, "case-collision")
+    if (is.na(x) || x == "") {
+      iss <- c(iss, "empty")
+    }
+    if (!is.na(x) && nzchar(x) && x != make.names(x)) {
+      iss <- c(iss, "non-syntactic")
+    }
+    if (!is.na(x) && grepl("\\s", x)) {
+      iss <- c(iss, "whitespace")
+    }
+    if (!is.na(x) && x != trimws(x)) {
+      iss <- c(iss, "leading/trailing space")
+    }
+    if (!is.na(x) && grepl("[^\\x01-\\x7F]", x, perl = TRUE)) {
+      iss <- c(iss, "non-ASCII")
+    }
+    if (sum(nm == x) > 1L) {
+      iss <- c(iss, "duplicated")
+    }
+    if (case_dup[i] && sum(nm == x) == 1L) {
+      iss <- c(iss, "case-collision")
+    }
     if (length(iss) > 0L) {
       rows[[length(rows) + 1L]] <- data.frame(
-        column = x, issues = paste(iss, collapse = ", "), stringsAsFactors = FALSE
+        column = x,
+        issues = paste(iss, collapse = ", "),
+        stringsAsFactors = FALSE
       )
     }
   }
-  if (length(rows) == 0L) return(data.frame(column = character(), issues = character()))
+  if (length(rows) == 0L) {
+    return(data.frame(column = character(), issues = character()))
+  }
   do.call(rbind, rows)
 }
 
@@ -117,8 +162,14 @@ clean_colnames <- function(data) {
   old <- names(data)
   new <- janitor::make_clean_names(old, case = "snake")
   names(data) <- new
-  if (any(old != new)) cli::cli_inform("Renamed {sum(old != new)} column{?s}.")
-  attr(data, "colname_map") <- data.frame(old = old, new = new, stringsAsFactors = FALSE)
+  if (any(old != new)) {
+    cli::cli_inform("Renamed {sum(old != new)} column{?s}.")
+  }
+  attr(data, "colname_map") <- data.frame(
+    old = old,
+    new = new,
+    stringsAsFactors = FALSE
+  )
   data
 }
 
@@ -147,7 +198,9 @@ check_types <- function(data, max_factor_levels = 50) {
         num_ok <- suppressWarnings(!is.na(as.numeric(cleaned)))
         if (mean(num_ok) >= 0.95) {
           out[[length(out) + 1L]] <- data.frame(
-            column = col, stored_type = st, issue = "numeric stored as text",
+            column = col,
+            stored_type = st,
+            issue = "numeric stored as text",
             detail = sprintf("%.0f%% parse as numeric", 100 * mean(num_ok)),
             stringsAsFactors = FALSE
           )
@@ -156,38 +209,56 @@ check_types <- function(data, max_factor_levels = 50) {
           grepl("^\\d{1,2}[-/]\\d{1,2}[-/]\\d{4}$", nonmiss)
         if (mean(date_ok) >= 0.95) {
           out[[length(out) + 1L]] <- data.frame(
-            column = col, stored_type = st, issue = "date stored as text",
-            detail = "matches a date pattern", stringsAsFactors = FALSE
+            column = col,
+            stored_type = st,
+            issue = "date stored as text",
+            detail = "matches a date pattern",
+            stringsAsFactors = FALSE
           )
         }
         lvls <- tolower(unique(nonmiss))
-        if (all(lvls %in% c("y", "n", "yes", "no", "true", "false", "t", "f"))) {
+        if (
+          all(lvls %in% c("y", "n", "yes", "no", "true", "false", "t", "f"))
+        ) {
           out[[length(out) + 1L]] <- data.frame(
-            column = col, stored_type = st, issue = "logical stored as text",
-            detail = paste(unique(nonmiss), collapse = "/"), stringsAsFactors = FALSE
+            column = col,
+            stored_type = st,
+            issue = "logical stored as text",
+            detail = paste(unique(nonmiss), collapse = "/"),
+            stringsAsFactors = FALSE
           )
         }
       }
       nu <- length(unique(nonmiss))
       if (nu > max_factor_levels) {
         out[[length(out) + 1L]] <- data.frame(
-          column = col, stored_type = st, issue = "high-cardinality",
-          detail = sprintf("%d unique values", nu), stringsAsFactors = FALSE
+          column = col,
+          stored_type = st,
+          issue = "high-cardinality",
+          detail = sprintf("%d unique values", nu),
+          stringsAsFactors = FALSE
         )
       }
     } else if (is.numeric(v)) {
       u <- unique(v[!is.na(v)])
       if (length(u) > 0L && all(u %in% c(0, 1))) {
         out[[length(out) + 1L]] <- data.frame(
-          column = col, stored_type = st, issue = "binary stored as numeric",
-          detail = "only 0/1 - consider logical or factor", stringsAsFactors = FALSE
+          column = col,
+          stored_type = st,
+          issue = "binary stored as numeric",
+          detail = "only 0/1 - consider logical or factor",
+          stringsAsFactors = FALSE
         )
       }
     }
   }
   if (length(out) == 0L) {
-    return(data.frame(column = character(), stored_type = character(),
-                      issue = character(), detail = character()))
+    return(data.frame(
+      column = character(),
+      stored_type = character(),
+      issue = character(),
+      detail = character()
+    ))
   }
   do.call(rbind, out)
 }
@@ -204,19 +275,29 @@ check_constant_cols <- function(data) {
     v <- data[[col]]
     if (all(is.na(v))) {
       rows[[length(rows) + 1L]] <- data.frame(
-        column = col, issue = "all missing", n_unique = 0L, stringsAsFactors = FALSE
+        column = col,
+        issue = "all missing",
+        n_unique = 0L,
+        stringsAsFactors = FALSE
       )
     } else {
       nu <- length(unique(v[!is.na(v)]))
       if (nu <= 1L) {
         rows[[length(rows) + 1L]] <- data.frame(
-          column = col, issue = "constant", n_unique = nu, stringsAsFactors = FALSE
+          column = col,
+          issue = "constant",
+          n_unique = nu,
+          stringsAsFactors = FALSE
         )
       }
     }
   }
   if (length(rows) == 0L) {
-    return(data.frame(column = character(), issue = character(), n_unique = integer()))
+    return(data.frame(
+      column = character(),
+      issue = character(),
+      n_unique = integer()
+    ))
   }
   do.call(rbind, rows)
 }
@@ -234,8 +315,14 @@ check_constant_cols <- function(data) {
 #' @export
 check_collinearity <- function(data, threshold = 0.9) {
   num <- data[vapply(data, is.numeric, logical(1))]
-  empty <- data.frame(col1 = character(), col2 = character(), correlation = double())
-  if (ncol(num) < 2L) return(empty)
+  empty <- data.frame(
+    col1 = character(),
+    col2 = character(),
+    correlation = double()
+  )
+  if (ncol(num) < 2L) {
+    return(empty)
+  }
   cm <- suppressWarnings(stats::cor(num, use = "pairwise.complete.obs"))
   cols <- colnames(cm)
   out <- list()
@@ -244,12 +331,17 @@ check_collinearity <- function(data, threshold = 0.9) {
       r <- cm[i, j]
       if (!is.na(r) && abs(r) >= threshold) {
         out[[length(out) + 1L]] <- data.frame(
-          col1 = cols[i], col2 = cols[j], correlation = r, stringsAsFactors = FALSE
+          col1 = cols[i],
+          col2 = cols[j],
+          correlation = r,
+          stringsAsFactors = FALSE
         )
       }
     }
   }
-  if (length(out) == 0L) return(empty)
+  if (length(out) == 0L) {
+    return(empty)
+  }
   res <- do.call(rbind, out)
   res[order(-abs(res$correlation)), , drop = FALSE]
 }
@@ -272,7 +364,8 @@ describe_cohort <- function(data) {
     n_missing = vapply(data, function(x) sum(is.na(x)), integer(1)),
     prop_missing = vapply(data, function(x) mean(is.na(x)), double(1)),
     n_unique = vapply(data, function(x) length(unique(x)), integer(1)),
-    row.names = NULL, stringsAsFactors = FALSE
+    row.names = NULL,
+    stringsAsFactors = FALSE
   )
   list(
     dims = c(rows = nrow(data), cols = ncol(data)),
