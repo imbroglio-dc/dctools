@@ -37,6 +37,7 @@ Suggests:
     BiocManager,
     crew,
     dbplyr,
+    digest,
     gtsummary,
     janitor,
     jsonlite,
