@@ -103,3 +103,9 @@
   }
   out
 }
+
+# Attach a provenance record to a registered count id.
+.store_provenance <- function(report, id, provenance) {
+  report$provenance[[id]] <- c(list(id = id), provenance)
+  invisible(NULL)
+}
