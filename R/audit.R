@@ -244,6 +244,260 @@
   )
 }
 
+# C4 Complete -------------------------------------------------------------------
+
+.check_complete <- function(store) {
+  progress <- .read_progress(store)
+  items <- lapply(seq_len(nrow(progress)), function(i) {
+    .item(
+      progress$name[[i]],
+      !progress$progress[[i]] %in% c("errored", "canceled"),
+      progress$progress[[i]]
+    )
+  })
+  .check_result("C4", .bind_items(items), "no target progress recorded")
+}
+
+# C5 Inputs ---------------------------------------------------------------------
+
+.check_inputs <- function(ledger) {
+  files <- c(ledger$inputs, ledger$documents)
+  items <- lapply(files, function(f) {
+    path <- .as_chr(f$path)
+    now <- .sha256_file(path)
+    if (is.na(now)) {
+      return(.item(path, FALSE, "missing"))
+    }
+    .item(
+      path,
+      identical(now, .as_chr(f$sha256)),
+      "SHA-256 differs from the ledger"
+    )
+  })
+  .check_result(
+    "C5",
+    .bind_items(items),
+    "no inputs or documents in the ledger"
+  )
+}
+
+# C6 Decisions ------------------------------------------------------------------
+
+.check_decisions <- function(ledger) {
+  links <- ledger$links
+  if (!length(links)) {
+    return(.check_result("C6", .items(), "no decision links in the ledger"))
+  }
+  status <- stats::setNames(
+    vapply(ledger$targets, function(t) .as_chr(t$status), ""),
+    vapply(ledger$targets, function(t) .as_chr(t$name), "")
+  )
+  ids <- unique(vapply(links, function(l) .as_chr(l$decision_id), ""))
+  items <- lapply(ids, function(id) {
+    rows <- Filter(function(l) identical(.as_chr(l$decision_id), id), links)
+    targets <- vapply(rows, function(l) .as_chr(l$target), "")
+    bad <- vapply(
+      targets,
+      function(t) {
+        if (is.na(t)) {
+          return("no target")
+        }
+        if (!t %in% names(status)) {
+          return(paste(t, "is not in the run"))
+        }
+        if (status[[t]] %in% c("errored", "canceled")) {
+          return(paste(t, status[[t]]))
+        }
+        ""
+      },
+      ""
+    )
+    .item(id, all(bad == ""), paste(bad[bad != ""], collapse = "; "))
+  })
+  .check_result("C6", .bind_items(items), "no decision links in the ledger")
+}
+
+# C7 Records --------------------------------------------------------------------
+
+.check_records <- function(ledger, store) {
+  if (!length(ledger$records)) {
+    return(.check_result("C7", .items(), "no records in the ledger"))
+  }
+  objects <- stats::setNames(
+    vapply(ledger$targets, function(t) .as_chr(t$object_sha256), ""),
+    vapply(ledger$targets, function(t) .as_chr(t$name), "")
+  )
+  items <- lapply(ledger$records, function(r) {
+    path <- .as_chr(r$path)
+    if (!identical(.sha256_file(path), .as_chr(r$sha256))) {
+      return(.item(path, FALSE, "missing or changed since the run"))
+    }
+    stamps <- .parse_stamps(path)
+    if (length(stamps) != 1L) {
+      return(.item(
+        path,
+        FALSE,
+        sprintf("%d stamps (expected 1)", length(stamps))
+      ))
+    }
+    s <- stamps[[1]]
+    problems <- c(
+      if (!identical(.as_chr(s$run_id), .as_chr(ledger$run$run_id))) {
+        "stamped with another run"
+      },
+      if (!identical(.as_chr(s$sha), .as_chr(ledger$code$sha))) {
+        "stamped with another commit"
+      },
+      unlist(lapply(names(s$objects), function(nm) {
+        recorded <- .as_chr(s$objects[[nm]])
+        if (!nm %in% names(objects)) {
+          paste(nm, "is not in the ledger")
+        } else if (
+          !identical(recorded, objects[[nm]]) ||
+            !identical(recorded, .sha256_file(.object_path(store, nm)))
+        ) {
+          paste(nm, "differs from what the record read")
+        }
+      }))
+    )
+    .item(path, !length(problems), paste(problems, collapse = "; "))
+  })
+  .check_result("C7", .bind_items(items), "no records in the ledger")
+}
+
+# C8 Provenance -----------------------------------------------------------------
+
+.provenance_required <- c(
+  "file",
+  "line_start",
+  "line_end",
+  "code",
+  "function_name",
+  "function_file",
+  "function_line_start",
+  "function_line_end",
+  "target"
+)
+
+# The ledger's paths are repo-relative, the report's absolute.
+.same_path <- function(absolute, relative) {
+  (is.na(absolute) && is.na(relative)) ||
+    (!is.na(absolute) &&
+      !is.na(relative) &&
+      (identical(absolute, relative) ||
+        endsWith(absolute, paste0("/", relative))))
+}
+
+.same_provenance <- function(report_p, ledger_p) {
+  if (is.null(ledger_p)) {
+    return(FALSE)
+  }
+  fields <- c(
+    "line_start",
+    "line_end",
+    "code",
+    "function_name",
+    "function_line_start",
+    "function_line_end",
+    "target"
+  )
+  all(vapply(
+    fields,
+    function(f) {
+      identical(.as_chr(report_p[[f]]), .as_chr(ledger_p[[f]]))
+    },
+    logical(1)
+  )) &&
+    .same_path(.as_chr(report_p$file), .as_chr(ledger_p$file)) &&
+    .same_path(.as_chr(report_p$function_file), .as_chr(ledger_p$function_file))
+}
+
+.check_provenance <- function(ledger, reports) {
+  if (!length(reports)) {
+    return(.check_result("C8", .items(), "no reportable report was available"))
+  }
+  in_ledger <- list()
+  for (p in ledger$provenance) {
+    in_ledger[[paste0(.as_chr(p$report), ":", .as_chr(p$id))]] <- p
+  }
+  items <- list()
+  for (nm in names(reports)) {
+    r <- reports[[nm]]
+    for (id in c(names(r$counts), names(r$unprinted_counts))) {
+      label <- paste0(nm, ":", id)
+      p <- r$provenance[[id]]
+      if (is.null(p)) {
+        items[[length(items) + 1L]] <- .item(label, FALSE, "no provenance")
+        next
+      }
+      missing <- .provenance_required[vapply(
+        .provenance_required,
+        function(f) .is_missing(p[[f]]),
+        logical(1)
+      )]
+      if (length(missing)) {
+        items[[length(items) + 1L]] <- .item(
+          label,
+          FALSE,
+          paste("missing:", paste(missing, collapse = ", "))
+        )
+        next
+      }
+      items[[length(items) + 1L]] <- .item(
+        label,
+        .same_provenance(p, in_ledger[[label]]),
+        "the ledger's provenance differs from the report's"
+      )
+    }
+    for (u in r$unprovenanced) {
+      items[[length(items) + 1L]] <- .item(
+        paste0(nm, ":", basename(.as_chr(u$file)), ":", .as_chr(u$line_start)),
+        FALSE,
+        "a number was printed with no provenance"
+      )
+    }
+  }
+  .check_result("C8", .bind_items(items), "the reports hold no values")
+}
+
+# C9 Engine ---------------------------------------------------------------------
+
+.check_engine <- function(ledger) {
+  engine <- .dctools_engine()
+  recorded_sha <- .as_chr(ledger$code$dctools_remote_sha)
+  .check_result(
+    "C9",
+    .bind_items(list(
+      .item(
+        "installed from a pushed commit",
+        !is.na(recorded_sha),
+        "dctools has no RemoteSha: it was not installed from a pushed commit"
+      ),
+      .item(
+        "same engine",
+        !is.na(recorded_sha) &&
+          identical(recorded_sha, .as_chr(engine$remote_sha)) &&
+          identical(
+            .as_chr(ledger$code$dctools_version),
+            .as_chr(engine$version)
+          ),
+        "the audit did not run under the same dctools as the run"
+      )
+    )),
+    ""
+  )
+}
+
+.verdict <- function(status) {
+  if (all(status == "PASS")) {
+    "PASS"
+  } else if (any(status == "FAIL")) {
+    "FAIL"
+  } else {
+    "INCOMPLETE"
+  }
+}
+
 #' Audit a pipeline run against its ledger
 #'
 #' Checks a ledger written by [write_run_ledger()] against git, the targets
@@ -296,9 +550,17 @@ audit_run <- function(ledger_path, store = NULL, script = NULL, repo = ".") {
   ledger <- jsonlite::read_json(ledger_path, simplifyVector = FALSE)
   reportable <- vapply(ledger$reportable, function(r) .as_chr(r$name), "")
   reports <- .load_reportable(store, reportable)
-  .bind_results(list(
+  result <- .bind_results(list(
     .check_code(ledger, repo),
     .check_store(ledger, store),
-    .check_fresh(ledger, script, store)
+    .check_fresh(ledger, script, store),
+    .check_complete(store),
+    .check_inputs(ledger),
+    .check_decisions(ledger),
+    .check_records(ledger, store),
+    .check_provenance(ledger, reports),
+    .check_engine(ledger)
   ))
+  attr(result, "verdict") <- .verdict(result$status)
+  result
 }
