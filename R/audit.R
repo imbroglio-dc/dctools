@@ -305,8 +305,13 @@
         if (!t %in% names(status)) {
           return(paste(t, "is not in the run"))
         }
-        if (status[[t]] %in% c("errored", "canceled")) {
-          return(paste(t, status[[t]]))
+        if (!status[[t]] %in% c("completed", "skipped", "built")) {
+          return(paste0(
+            t,
+            " was not built in this run (status ",
+            if (is.na(status[[t]])) "none" else status[[t]],
+            ")"
+          ))
         }
         ""
       },
@@ -341,22 +346,36 @@
       ))
     }
     s <- stamps[[1]]
+    run_id <- .as_chr(s$run_id)
+    sha <- .as_chr(s$sha)
     problems <- c(
-      if (!identical(.as_chr(s$run_id), .as_chr(ledger$run$run_id))) {
+      if (is.na(run_id)) {
+        "the stamp has no run id"
+      } else if (!identical(run_id, .as_chr(ledger$run$run_id))) {
         "stamped with another run"
       },
-      if (!identical(.as_chr(s$sha), .as_chr(ledger$code$sha))) {
+      if (is.na(sha)) {
+        "the stamp has no commit"
+      } else if (!identical(sha, .as_chr(ledger$code$sha))) {
         "stamped with another commit"
+      },
+      if (!length(s$objects)) {
+        "the stamp names no objects"
       },
       unlist(lapply(names(s$objects), function(nm) {
         recorded <- .as_chr(s$objects[[nm]])
         if (!nm %in% names(objects)) {
           paste(nm, "is not in the ledger")
-        } else if (
-          !identical(recorded, objects[[nm]]) ||
-            !identical(recorded, .sha256_file(.object_path(store, nm)))
-        ) {
-          paste(nm, "differs from what the record read")
+        } else {
+          in_store <- .sha256_file(.object_path(store, nm))
+          if (is.na(recorded) || is.na(objects[[nm]]) || is.na(in_store)) {
+            paste(nm, "has no hash")
+          } else if (
+            !identical(recorded, objects[[nm]]) ||
+              !identical(recorded, in_store)
+          ) {
+            paste(nm, "differs from what the record read")
+          }
         }
       }))
     )

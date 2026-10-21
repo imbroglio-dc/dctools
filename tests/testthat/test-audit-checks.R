@@ -153,3 +153,126 @@ test_that(".verdict: all PASS passes, any FAIL fails, otherwise incomplete", {
   expect_identical(.verdict(c("PASS", "NOT EVALUATED", "FAIL")), "FAIL")
   expect_identical(.verdict(c("PASS", "NOT EVALUATED")), "INCOMPLETE")
 })
+
+# Rewrites the record's stamp and re-seals the ledger's record hash, so only
+# the stamp's content differs from the untouched fixture.
+restamp_record <- function(proj, fn) {
+  f <- file.path(proj, "output", "record.html")
+  lines <- readLines(f)
+  i <- grep("<!-- dctools-stamp ", lines, fixed = TRUE)
+  stamp <- jsonlite::fromJSON(
+    sub("^.*<!-- dctools-stamp (\\{.*\\}) -->.*$", "\\1", lines[i]),
+    simplifyVector = FALSE
+  )
+  json <- jsonlite::toJSON(
+    fn(stamp),
+    auto_unbox = TRUE,
+    null = "null",
+    na = "null"
+  )
+  lines[i] <- paste0("<!-- dctools-stamp ", json, " -->")
+  writeLines(lines, f)
+  sha <- digest::digest(f, algo = "sha256", file = TRUE)
+  edit_ledger(fixture_ledger_path(proj), function(l) {
+    l$records[[1]]$sha256 <- sha
+    l
+  })
+}
+
+test_that("C7 fails a stamp that names no objects", {
+  skip_ledger_fixture()
+  local_engine()
+  for (empty in list(NULL, setNames(list(), character(0)))) {
+    proj <- copy_fixture()
+    restamp_record(proj, function(s) {
+      s["objects"] <- list(empty)
+      if (is.null(empty)) {
+        s$objects <- NULL
+      }
+      s
+    })
+    result <- audit_copy(proj)
+    expect_identical(status_of(result, "C7"), "FAIL")
+    expect_match(
+      detail_of(result, "C7"),
+      "the stamp names no objects",
+      all = FALSE
+    )
+  }
+})
+
+test_that("C7 fails a stamp with no run id, no commit, or a null object hash", {
+  skip_ledger_fixture()
+  local_engine()
+  proj <- copy_fixture()
+  restamp_record(proj, function(s) {
+    s$run_id <- NULL
+    s
+  })
+  result <- audit_copy(proj)
+  expect_identical(status_of(result, "C7"), "FAIL")
+  expect_match(detail_of(result, "C7"), "the stamp has no run id", all = FALSE)
+
+  proj2 <- copy_fixture()
+  edit_ledger(fixture_ledger_path(proj2), function(l) {
+    l$run$run_id <- NULL
+    l
+  })
+  restamp_record(proj2, function(s) {
+    s$run_id <- NULL
+    s
+  })
+  expect_match(
+    detail_of(audit_copy(proj2), "C7"),
+    "the stamp has no run id",
+    all = FALSE
+  )
+
+  proj3 <- copy_fixture()
+  restamp_record(proj3, function(s) {
+    s$sha <- NULL
+    s
+  })
+  expect_match(
+    detail_of(audit_copy(proj3), "C7"),
+    "the stamp has no commit",
+    all = FALSE
+  )
+
+  proj4 <- copy_fixture()
+  restamp_record(proj4, function(s) {
+    s$objects[[1]] <- NULL
+    s$objects <- c(s$objects, list(values = NULL))
+    s
+  })
+  result4 <- audit_copy(proj4)
+  expect_identical(status_of(result4, "C7"), "FAIL")
+  expect_match(detail_of(result4, "C7"), "has no hash", all = FALSE)
+})
+
+test_that("C6 fails a linked target whose status is missing or not a built one", {
+  skip_ledger_fixture()
+  local_engine()
+  for (status in list(NULL, "started")) {
+    proj <- copy_fixture()
+    edit_ledger(fixture_ledger_path(proj), function(l) {
+      for (i in seq_along(l$targets)) {
+        if (identical(l$targets[[i]]$name, "evidence")) {
+          l$targets[[i]]["status"] <- list(status)
+        }
+      }
+      l
+    })
+    result <- audit_copy(proj)
+    expect_identical(status_of(result, "C6"), "FAIL")
+    expect_match(
+      detail_of(result, "C6"),
+      paste0(
+        "evidence was not built in this run \\(status ",
+        if (is.null(status)) "none" else status,
+        "\\)"
+      ),
+      all = FALSE
+    )
+  }
+})
