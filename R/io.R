@@ -19,13 +19,8 @@
 #' tab <- data.frame(group = c("a", "b"), n = c(3, 42))
 #' suppress_small_cells(tab, cols = "n")
 #' @export
-suppress_small_cells <- function(
-  data,
-  cols = NULL,
-  threshold = 11,
-  marker = "<11",
-  mask_zero = FALSE
-) {
+suppress_small_cells <- function(data, cols = NULL, threshold = 11,
+                                 marker = "<11", mask_zero = FALSE) {
   if (is.null(cols)) {
     cols <- names(data)[vapply(data, is.numeric, logical(1))]
   }

@@ -43,17 +43,10 @@
 #' )
 #' compare_targets(c(att = -1.628, N = 2847), targets)
 #' @export
-compare_targets <- function(
-  results,
-  targets,
-  tolerances = NULL,
-  by = "target"
-) {
+compare_targets <- function(results, targets, tolerances = NULL, by = "target") {
   if (is.numeric(results) && !is.null(names(results))) {
     results <- data.frame(
-      key = names(results),
-      value = unname(results),
-      stringsAsFactors = FALSE
+      key = names(results), value = unname(results), stringsAsFactors = FALSE
     )
     names(results)[1] <- by
   }
@@ -66,10 +59,7 @@ compare_targets <- function(
   )
 
   merged <- dplyr::left_join(
-    targets,
-    results[, c(by, "value")],
-    by = by,
-    suffix = c("", ".computed")
+    targets, results[, c(by, "value")], by = by, suffix = c("", ".computed")
   )
   reported <- merged[["value"]]
   computed <- merged[["value.computed"]]
@@ -113,13 +103,8 @@ compare_targets <- function(
   }
 
   out <- data.frame(
-    key = merged[[by]],
-    kind = kind,
-    reported = reported,
-    computed = computed,
-    diff = diff,
-    tolerance = applied_tol,
-    status = status,
+    key = merged[[by]], kind = kind, reported = reported, computed = computed,
+    diff = diff, tolerance = applied_tol, status = status,
     stringsAsFactors = FALSE
   )
   names(out)[1] <- by
@@ -130,13 +115,7 @@ compare_targets <- function(
 # --- internals ----------------------------------------------------------------
 
 .default_tolerances <- function() {
-  list(
-    count = 0,
-    estimate = 0.01,
-    se = 0.05,
-    percentage = 0.1,
-    summary_stat = 0.01
-  )
+  list(count = 0, estimate = 0.01, se = 0.05, percentage = 0.1, summary_stat = 0.01)
 }
 
 # Significance bucket: 0 (<.001), 1 ([.001,.01)), 2 ([.01,.05)), 3 (>=.05).
@@ -147,10 +126,6 @@ compare_targets <- function(
   n_fail <- sum(out$status == "FAIL")
   n_un <- sum(out$status == "UNMATCHED")
   msg <- "compare_targets: {n_pass} PASS, {n_fail} FAIL, {n_un} unmatched."
-  if (n_fail > 0L || n_un > 0L) {
-    cli::cli_warn(msg)
-  } else {
-    cli::cli_alert_success(msg)
-  }
+  if (n_fail > 0L || n_un > 0L) cli::cli_warn(msg) else cli::cli_alert_success(msg)
   invisible(out)
 }

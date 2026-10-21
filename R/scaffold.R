@@ -11,21 +11,14 @@
 #' @param extra Optional character vector of additional relative dirs to create.
 #' @return `path`, invisibly.
 #' @export
-make_file_dirs <- function(
-  path = ".",
-  code = TRUE,
-  data = TRUE,
-  output = TRUE,
-  docs = TRUE,
-  tests = TRUE,
-  extra = NULL
-) {
+make_file_dirs <- function(path = ".", code = TRUE, data = TRUE, output = TRUE,
+                           docs = TRUE, tests = TRUE, extra = NULL) {
   subtrees <- c(
-    if (code) c("code/functions", "code/analysis"),
-    if (data) c("data/raw", "data/processed", "data/metadata"),
+    if (code)   c("code/functions", "code/analysis"),
+    if (data)   c("data/raw", "data/processed", "data/metadata"),
     if (output) c("output/tables", "output/figures", "output/models"),
-    if (docs) "docs",
-    if (tests) "tests/testthat",
+    if (docs)   "docs",
+    if (tests)  "tests/testthat",
     extra
   )
   for (d in subtrees) {
@@ -73,13 +66,8 @@ make_file_dirs <- function(
 #' @seealso The `project-setup` skill (biostat marketplace), which calls this to
 #'   scaffold mechanics and then generates the project router.
 #' @export
-create_project <- function(
-  name,
-  path = ".",
-  type = c("analysis", "package"),
-  targets = FALSE,
-  git = TRUE
-) {
+create_project <- function(name, path = ".", type = c("analysis", "package"),
+                           targets = FALSE, git = TRUE) {
   type <- match.arg(type)
   dest <- fs::path(path, name)
   if (fs::dir_exists(dest) && length(fs::dir_ls(dest)) > 0L) {
@@ -88,7 +76,7 @@ create_project <- function(
   switch(
     type,
     analysis = .create_analysis_project(name, dest, targets, git),
-    package = .create_package_project(name, dest, git)
+    package  = .create_package_project(name, dest, git)
   )
   cli::cli_alert_success("Created {type} project at {.path {dest}}.")
   invisible(dest)
@@ -104,25 +92,23 @@ create_project <- function(
   .write_rproj(dest, name)
   .write_analysis_readme(dest, name)
   .write_state_stack(dest)
-  if (isTRUE(targets)) {
-    .write_targets_stub(dest)
-  }
+  if (isTRUE(targets)) .write_targets_stub(dest)
   if (isTRUE(git)) .git_init(dest)
 }
 
 .create_package_project <- function(name, dest, git) {
   usethis::create_package(dest, open = FALSE, rstudio = FALSE)
   usethis::with_project(dest, quiet = TRUE, code = {
-    .try("MIT license", usethis::use_mit_license("David Chen"))
+    .try("MIT license",      usethis::use_mit_license("David Chen"))
     .try("roxygen markdown", usethis::use_roxygen_md())
-    .try("testthat 3", usethis::use_testthat(3))
-    .try("package doc", usethis::use_package_doc())
-    .try("NEWS", usethis::use_news_md())
-    .try("readme", usethis::use_readme_md())
-    .try("pkgdown", usethis::use_pkgdown())
-    .try("R-CMD-check CI", usethis::use_github_action("check-standard"))
-    .try("coverage CI", usethis::use_github_action("test-coverage"))
-    .try("pkgdown CI", usethis::use_github_action("pkgdown"))
+    .try("testthat 3",       usethis::use_testthat(3))
+    .try("package doc",      usethis::use_package_doc())
+    .try("NEWS",             usethis::use_news_md())
+    .try("readme",           usethis::use_readme_md())
+    .try("pkgdown",          usethis::use_pkgdown())
+    .try("R-CMD-check CI",   usethis::use_github_action("check-standard"))
+    .try("coverage CI",      usethis::use_github_action("test-coverage"))
+    .try("pkgdown CI",       usethis::use_github_action("pkgdown"))
   })
   .write_air_toml(dest)
   .write_claude_package(dest)
@@ -162,77 +148,68 @@ create_project <- function(
 }
 
 .write_rprofile <- function(dest) {
-  writeLines(
-    c(
-      "# renv activation - guarded so the project loads cleanly *before*",
-      "# renv::init() has been run.",
-      "if (file.exists(\"renv/activate.R\")) source(\"renv/activate.R\")"
-    ),
-    fs::path(dest, ".Rprofile")
-  )
+  writeLines(c(
+    "# renv activation - guarded so the project loads cleanly *before*",
+    "# renv::init() has been run.",
+    "if (file.exists(\"renv/activate.R\")) source(\"renv/activate.R\")"
+  ), fs::path(dest, ".Rprofile"))
 }
 
 .write_rproj <- function(dest, name) {
-  writeLines(
-    c(
-      "Version: 1.0",
-      "",
-      "RestoreWorkspace: No",
-      "SaveWorkspace: No",
-      "AlwaysSaveHistory: No",
-      "",
-      "EnableCodeIndexing: Yes",
-      "UseSpacesForTab: Yes",
-      "NumSpacesForTab: 2",
-      "Encoding: UTF-8",
-      "",
-      "RnwWeave: knitr",
-      "LaTeX: XeLaTeX"
-    ),
-    fs::path(dest, paste0(name, ".Rproj"))
-  )
+  writeLines(c(
+    "Version: 1.0",
+    "",
+    "RestoreWorkspace: No",
+    "SaveWorkspace: No",
+    "AlwaysSaveHistory: No",
+    "",
+    "EnableCodeIndexing: Yes",
+    "UseSpacesForTab: Yes",
+    "NumSpacesForTab: 2",
+    "Encoding: UTF-8",
+    "",
+    "RnwWeave: knitr",
+    "LaTeX: XeLaTeX"
+  ), fs::path(dest, paste0(name, ".Rproj")))
 }
 
 .write_analysis_readme <- function(dest, name) {
-  writeLines(
-    c(
-      paste0("# ", name),
-      "",
-      "{{ONE-LINE description of the project.}}",
-      "",
-      "## Layout",
-      "",
-      "```",
-      "code/functions/   pure, documented, reusable functions (no library() calls)",
-      "code/analysis/    scripts or _targets.R that orchestrate the functions",
-      "data/raw/         read-only raw inputs (git-ignored - PHI)",
-      "data/processed/   derived analysis datasets (git-ignored); processed means it went",
-      "                   through some pipeline step, NOT that it is de-identified",
-      "data/metadata/    curated, VERIFIED non-sensitive codebooks / dictionaries (versioned)",
-      "output/           tables, figures, models (git-ignored; markers kept)",
-      "docs/             rendered deliverables (reports, slides) - versioned",
-      "tests/testthat/   tests, run with testthat::test_dir(\"tests/testthat\")",
-      "```",
-      "",
-      "## Reproducibility",
-      "",
-      "Package versions, and the R version, are pinned in `renv.lock` by",
-      "[`renv`](https://rstudio.github.io/renv/): already initialised - run",
-      "`renv::restore()` after cloning, and `renv::snapshot()` after adding",
-      "dependencies.",
-      "",
-      .r_version_pin_line(),
-      "",
-      "## PHI constraint",
-      "",
-      "Never commit, print, or transmit individual-level patient data. `data/raw/`",
-      "and `data/processed/` are git-ignored. `data/processed/` is not automatically",
-      "de-identified just because it has been processed - verify before treating it",
-      "as safe. Suppress table cells with counts below the project's threshold before",
-      "any output leaves the project."
-    ),
-    fs::path(dest, "README.md")
-  )
+  writeLines(c(
+    paste0("# ", name),
+    "",
+    "{{ONE-LINE description of the project.}}",
+    "",
+    "## Layout",
+    "",
+    "```",
+    "code/functions/   pure, documented, reusable functions (no library() calls)",
+    "code/analysis/    scripts or _targets.R that orchestrate the functions",
+    "data/raw/         read-only raw inputs (git-ignored - PHI)",
+    "data/processed/   derived analysis datasets (git-ignored); processed means it went",
+    "                   through some pipeline step, NOT that it is de-identified",
+    "data/metadata/    curated, VERIFIED non-sensitive codebooks / dictionaries (versioned)",
+    "output/           tables, figures, models (git-ignored; markers kept)",
+    "docs/             rendered deliverables (reports, slides) - versioned",
+    "tests/testthat/   tests, run with testthat::test_dir(\"tests/testthat\")",
+    "```",
+    "",
+    "## Reproducibility",
+    "",
+    "Package versions, and the R version, are pinned in `renv.lock` by",
+    "[`renv`](https://rstudio.github.io/renv/): already initialised - run",
+    "`renv::restore()` after cloning, and `renv::snapshot()` after adding",
+    "dependencies.",
+    "",
+    .r_version_pin_line(),
+    "",
+    "## PHI constraint",
+    "",
+    "Never commit, print, or transmit individual-level patient data. `data/raw/`",
+    "and `data/processed/` are git-ignored. `data/processed/` is not automatically",
+    "de-identified just because it has been processed - verify before treating it",
+    "as safe. Suppress table cells with counts below the project's threshold before",
+    "any output leaves the project."
+  ), fs::path(dest, "README.md"))
 }
 
 #' @keywords internal
@@ -242,163 +219,148 @@ create_project <- function(
   if (nzchar(Sys.which("rig"))) {
     sprintf(
       "R version: `%s`, managed via [`rig`](https://github.com/r-lib/rig) (`rig add %s && rig default %s` to match).",
-      v,
-      v,
-      v
+      v, v, v
     )
   } else {
     sprintf(
       "R version: `%s`. Match it with [`rig`](https://github.com/r-lib/rig) (`rig add %s`) or your R version manager of choice.",
-      v,
-      v
+      v, v
     )
   }
 }
 
 .write_analysis_gitignore <- function(dest) {
-  writeLines(
-    c(
-      "# --- R ---",
-      ".Rproj.user/",
-      ".Rhistory",
-      ".RData",
-      ".Ruserdata",
-      "*-Ex.R",
-      "/*.tar.gz",
-      "/*.Rcheck/",
-      "",
-      "# --- Quarto / RMarkdown ---",
-      "/.quarto/",
-      "*_cache/",
-      "*_files/",
-      "*.knit.md",
-      "*.utf8.md",
-      "",
-      "# --- Python ---",
-      "__pycache__/",
-      "*.py[cod]",
-      ".ipynb_checkpoints/",
-      ".venv/",
-      "venv/",
-      "",
-      "# --- renv (commit renv.lock + renv/activate.R + renv/settings.json only) ---",
-      "renv/library/",
-      "renv/local/",
-      "renv/cellar/",
-      "renv/staging/",
-      "renv/python/",
-      "",
-      "# --- targets ---",
-      "_targets/",
-      "",
-      "# --- scratch (throwaway working files) ---",
-      "scratch/",
-      "",
-      "# --- OS ---",
-      ".DS_Store",
-      "Thumbs.db",
-      "*.swp",
-      "*~",
-      "",
-      "# --- Data: NEVER commit individual-level data (PHI) ---",
-      "data/raw/*",
-      "data/processed/*",
-      "!data/raw/.gitkeep",
-      "!data/processed/.gitkeep",
-      "*.rds",
-      "*.RData",
-      "*.rda",
-      "*.qs",
-      "*.qs2",
-      "*.parquet",
-      "*.feather",
-      "*.sas7bdat",
-      "*.dta",
-      "*.xpt",
-      "# Allow curated, non-PHI metadata (codebooks, variable dictionaries)",
-      "!data/metadata/*.csv",
-      "!data/metadata/*.xlsx",
-      "!data/metadata/*.yml",
-      "",
-      "# --- Output: keep generated artifacts out of git; keep dir markers ---",
-      "output/**/*",
-      "!output/**/",
-      "!output/**/.gitkeep",
-      "# but DO version rendered deliverables placed under docs/",
-      "!docs/**/*.pdf",
-      "!docs/**/*.html",
-      "!docs/**/*.docx",
-      "",
-      "# --- Logs / temp ---",
-      "*.log",
-      "*.tmp",
-      "Rplots.pdf",
-      "",
-      "# --- Secrets / environment ---",
-      ".Renviron",
-      ".env",
-      "*.key",
-      "*.token",
-      "*.secret",
-      "credentials.*",
-      "",
-      "# --- Claude Code local (personal) overrides ---",
-      ".claude/settings.local.json",
-      "",
-      "# --- Always keep .gitkeep markers ---",
-      "!.gitkeep"
-    ),
-    fs::path(dest, ".gitignore")
-  )
+  writeLines(c(
+    "# --- R ---",
+    ".Rproj.user/",
+    ".Rhistory",
+    ".RData",
+    ".Ruserdata",
+    "*-Ex.R",
+    "/*.tar.gz",
+    "/*.Rcheck/",
+    "",
+    "# --- Quarto / RMarkdown ---",
+    "/.quarto/",
+    "*_cache/",
+    "*_files/",
+    "*.knit.md",
+    "*.utf8.md",
+    "",
+    "# --- Python ---",
+    "__pycache__/",
+    "*.py[cod]",
+    ".ipynb_checkpoints/",
+    ".venv/",
+    "venv/",
+    "",
+    "# --- renv (commit renv.lock + renv/activate.R + renv/settings.json only) ---",
+    "renv/library/",
+    "renv/local/",
+    "renv/cellar/",
+    "renv/staging/",
+    "renv/python/",
+    "",
+    "# --- targets ---",
+    "_targets/",
+    "",
+    "# --- scratch (throwaway working files) ---",
+    "scratch/",
+    "",
+    "# --- OS ---",
+    ".DS_Store",
+    "Thumbs.db",
+    "*.swp",
+    "*~",
+    "",
+    "# --- Data: NEVER commit individual-level data (PHI) ---",
+    "data/raw/*",
+    "data/processed/*",
+    "!data/raw/.gitkeep",
+    "!data/processed/.gitkeep",
+    "*.rds",
+    "*.RData",
+    "*.rda",
+    "*.qs",
+    "*.qs2",
+    "*.parquet",
+    "*.feather",
+    "*.sas7bdat",
+    "*.dta",
+    "*.xpt",
+    "# Allow curated, non-PHI metadata (codebooks, variable dictionaries)",
+    "!data/metadata/*.csv",
+    "!data/metadata/*.xlsx",
+    "!data/metadata/*.yml",
+    "",
+    "# --- Output: keep generated artifacts out of git; keep dir markers ---",
+    "output/**/*",
+    "!output/**/",
+    "!output/**/.gitkeep",
+    "# but DO version rendered deliverables placed under docs/",
+    "!docs/**/*.pdf",
+    "!docs/**/*.html",
+    "!docs/**/*.docx",
+    "",
+    "# --- Logs / temp ---",
+    "*.log",
+    "*.tmp",
+    "Rplots.pdf",
+    "",
+    "# --- Secrets / environment ---",
+    ".Renviron",
+    ".env",
+    "*.key",
+    "*.token",
+    "*.secret",
+    "credentials.*",
+    "",
+    "# --- Claude Code local (personal) overrides ---",
+    ".claude/settings.local.json",
+    "",
+    "# --- Always keep .gitkeep markers ---",
+    "!.gitkeep"
+  ), fs::path(dest, ".gitignore"))
 }
 
 .write_targets_stub <- function(dest) {
-  writeLines(
-    c(
-      "# _targets.R - pipeline definition. Run with targets::tar_make().",
-      "library(targets)",
-      "tar_source(\"code/functions\")",
-      "tar_option_set(format = \"qs2\")",
-      "",
-      "list(",
-      "  # tar_target(raw,   load_raw()),",
-      "  # tar_target(clean, prepare(raw)),",
-      "  # tar_target(fit,   analyze(clean))",
-      ")"
-    ),
-    fs::path(dest, "_targets.R")
-  )
+  writeLines(c(
+    "# _targets.R - pipeline definition. Run with targets::tar_make().",
+    "library(targets)",
+    "tar_source(\"code/functions\")",
+    "tar_option_set(format = \"qs2\")",
+    "",
+    "list(",
+    "  # tar_target(raw,   load_raw()),",
+    "  # tar_target(clean, prepare(raw)),",
+    "  # tar_target(fit,   analyze(clean))",
+    ")"
+  ), fs::path(dest, "_targets.R"))
 }
 
 .write_air_toml <- function(dest) {
-  writeLines(
-    c(
-      "# Air formatter configuration (https://posit-dev.github.io/air/)",
-      "[format]",
-      "line-width = 80",
-      "indent-width = 2"
-    ),
-    fs::path(dest, "air.toml")
-  )
+  writeLines(c(
+    "# Air formatter configuration (https://posit-dev.github.io/air/)",
+    "[format]",
+    "line-width = 80",
+    "indent-width = 2"
+  ), fs::path(dest, "air.toml"))
 }
 
 .write_claude_package <- function(dest) {
   cl <- fs::path(dest, ".claude")
   fs::dir_create(fs::path(cl, "hooks"))
-  writeLines(
-    c(
-      "#!/usr/bin/env bash",
-      "# Block direct pushes to main/master; encourage PR workflow.",
-      "set -euo pipefail",
-      "payload=\"$(cat)\"",
-      "cmd=\"$(printf '%s' \"$payload\" | sed -n 's/.*\\\"command\\\"[[:space:]]*:[[:space:]]*\\\"\\(.*\\)\\\".*/\\1/p')\"",
-      "case \"$cmd\" in",
-      "  *\"git push\"*) printf '%s' \"$cmd\" | grep -qE '\\\\b(main|master)\\\\b' && { echo 'GUARD: push to main/master blocked; use a PR.' >&2; exit 2; } ;;",
-      "esac",
-      "exit 0"
-    ),
-    fs::path(cl, "hooks", "git-guard.sh")
-  )
+  writeLines(c(
+    "#!/usr/bin/env bash",
+    "# Block direct pushes to main/master; encourage PR workflow.",
+    "set -euo pipefail",
+    "payload=\"$(cat)\"",
+    "cmd=\"$(printf '%s' \"$payload\" | sed -n 's/.*\\\"command\\\"[[:space:]]*:[[:space:]]*\\\"\\(.*\\)\\\".*/\\1/p')\"",
+    "case \"$cmd\" in",
+    "  *\"git push\"*) printf '%s' \"$cmd\" | grep -qE '\\\\b(main|master)\\\\b' && { echo 'GUARD: push to main/master blocked; use a PR.' >&2; exit 2; } ;;",
+    "esac",
+    "exit 0"
+  ), fs::path(cl, "hooks", "git-guard.sh"))
   fs::file_chmod(fs::path(cl, "hooks", "git-guard.sh"), "0755")
   writeLines(
     '{\n  "hooks": {\n    "PreToolUse": [\n      { "matcher": "Bash", "hooks": [ { "type": "command", "command": "bash .claude/hooks/git-guard.sh" } ] }\n    ]\n  }\n}',
@@ -408,11 +370,7 @@ create_project <- function(
 
 .ensure_gitignore_entry <- function(path, entry) {
   gi <- fs::path(path, ".gitignore")
-  lines <- if (fs::file_exists(gi)) {
-    readLines(gi, warn = FALSE)
-  } else {
-    character(0)
-  }
+  lines <- if (fs::file_exists(gi)) readLines(gi, warn = FALSE) else character(0)
   if (!any(grepl(entry, lines, fixed = TRUE))) {
     writeLines(c(lines, entry), gi)
   }

@@ -11,18 +11,12 @@
 #' @param name Controller name (default `"dctools_local"`).
 #' @return A `crew_controller_local` object for use in a `targets` pipeline.
 #' @export
-configure_parallel <- function(
-  max_workers = parallel::detectCores() - 1,
-  memory_per_worker = 4,
-  name = "dctools_local"
-) {
-  if (
-    !requireNamespace("crew", quietly = TRUE) ||
-      !requireNamespace("ps", quietly = TRUE)
-  ) {
-    cli::cli_abort(
-      "{.fn configure_parallel} requires the {.pkg crew} and {.pkg ps} packages."
-    )
+configure_parallel <- function(max_workers = parallel::detectCores() - 1,
+                               memory_per_worker = 4,
+                               name = "dctools_local") {
+  if (!requireNamespace("crew", quietly = TRUE) ||
+      !requireNamespace("ps", quietly = TRUE)) {
+    cli::cli_abort("{.fn configure_parallel} requires the {.pkg crew} and {.pkg ps} packages.")
   }
   available_ram <- ps::ps_system_memory()$avail / 1024^3
   workers <- max(1L, min(max_workers, floor(available_ram / memory_per_worker)))

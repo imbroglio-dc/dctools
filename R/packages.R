@@ -44,14 +44,10 @@ load_packages <- function(pkgs, install = TRUE, repos = getOption("repos")) {
     for (pkg in to_install) {
       ok <- FALSE
       if (requireNamespace("renv", quietly = TRUE)) {
-        ok <- tryCatch(
-          {
-            renv::install(pkg, repos = repos)
-            TRUE
-          },
-          error = function(e) FALSE,
-          warning = function(w) FALSE
-        )
+        ok <- tryCatch({
+          renv::install(pkg, repos = repos)
+          TRUE
+        }, error = function(e) FALSE, warning = function(w) FALSE)
       }
       if (!ok) {
         if (!requireNamespace("BiocManager", quietly = TRUE)) {
@@ -60,38 +56,23 @@ load_packages <- function(pkgs, install = TRUE, repos = getOption("repos")) {
             error = function(e) NULL
           )
         }
-        ok <- tryCatch(
-          {
-            BiocManager::install(pkg, update = FALSE, ask = FALSE)
-            TRUE
-          },
-          error = function(e) FALSE
-        )
+        ok <- tryCatch({
+          BiocManager::install(pkg, update = FALSE, ask = FALSE)
+          TRUE
+        }, error = function(e) FALSE)
       }
       if (!ok) cli::cli_warn("Failed to install package {.pkg {pkg}}.")
     }
   }
 
-  loaded <- vapply(
-    pkgs,
-    function(p) {
-      tryCatch(
-        {
-          suppressPackageStartupMessages(
-            library(
-              p,
-              character.only = TRUE,
-              quietly = TRUE,
-              warn.conflicts = FALSE
-            )
-          )
-          TRUE
-        },
-        error = function(e) FALSE
+  loaded <- vapply(pkgs, function(p) {
+    tryCatch({
+      suppressPackageStartupMessages(
+        library(p, character.only = TRUE, quietly = TRUE, warn.conflicts = FALSE)
       )
-    },
-    logical(1)
-  )
+      TRUE
+    }, error = function(e) FALSE)
+  }, logical(1))
 
   stats::setNames(loaded, pkgs)
 }
