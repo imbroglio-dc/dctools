@@ -128,7 +128,10 @@ create_report <- function(hide_small_counts = TRUE, error_sink = NULL) {
 #' render_report(r)
 #' @export
 record_count <- function(report, id, expr, protect = FALSE) {
+  call <- sys.call()
+  env <- parent.frame()
   id <- .register_count(report, id, expr, protect)
+  .store_provenance(report, id, .capture_provenance(call, env))
   paste0("{{", id, "}}")
 }
 
@@ -144,9 +147,12 @@ record_count <- function(report, id, expr, protect = FALSE) {
 #' record_unprinted_count(r, "~excluded", 3)
 #' @export
 record_unprinted_count <- function(report, id, expr) {
+  call <- sys.call()
+  env <- parent.frame()
   .stop_if_prepared(report)
   stopifnot(startsWith(id, "~"))
   report$unprinted_counts[id] <- as.numeric(expr)
+  .store_provenance(report, id, .capture_provenance(call, env))
   invisible(id)
 }
 
@@ -333,7 +339,6 @@ add_data_frame <- function(report, data) {
 #'   all cells.
 #' @param max_levels The largest number of levels a printed dimension may
 #'   have.
-#' @param ... For `add_tabulation()`, passed to `add_count_table()`.
 #' @return A list with the cell `ids` and `placeholders` (arrays shaped like
 #'   the table), invisibly; `NULL` when the table was too large to print.
 #' @examples
@@ -350,6 +355,8 @@ add_count_table <- function(
   total_id = NULL,
   max_levels = 30L
 ) {
+  call <- sys.call()
+  env <- parent.frame()
   .add_count_table_impl(
     report,
     id,
@@ -357,15 +364,35 @@ add_count_table <- function(
     protect,
     labels_from_code,
     total_id,
-    max_levels
+    max_levels,
+    provenance = .capture_provenance(call, env)
   )
 }
 
 #' @rdname add_count_table
 #' @export
-add_tabulation <- function(report, id, expr, ...) {
+add_tabulation <- function(
+  report,
+  id,
+  expr,
+  protect = FALSE,
+  labels_from_code = FALSE,
+  total_id = NULL,
+  max_levels = 30L
+) {
+  call <- sys.call()
+  env <- parent.frame()
   tabulated <- table(expr, useNA = "ifany", dnn = NULL)
-  add_count_table(report, id, tabulated, ...)
+  .add_count_table_impl(
+    report,
+    id,
+    tabulated,
+    protect,
+    labels_from_code,
+    total_id,
+    max_levels,
+    provenance = .capture_provenance(call, env)
+  )
 }
 
 #' Run one block of report-building code

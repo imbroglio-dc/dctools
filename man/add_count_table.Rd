@@ -15,7 +15,15 @@ add_count_table(
   max_levels = 30L
 )
 
-add_tabulation(report, id, expr, ...)
+add_tabulation(
+  report,
+  id,
+  expr,
+  protect = FALSE,
+  labels_from_code = FALSE,
+  total_id = NULL,
+  max_levels = 30L
+)
 }
 \arguments{
 \item{report}{A report from \code{\link[=create_report]{create_report()}}.}
@@ -36,8 +44,6 @@ all cells.}
 
 \item{max_levels}{The largest number of levels a printed dimension may
 have.}
-
-\item{...}{For \code{add_tabulation()}, passed to \code{add_count_table()}.}
 }
 \value{
 A list with the cell \code{ids} and \code{placeholders} (arrays shaped like

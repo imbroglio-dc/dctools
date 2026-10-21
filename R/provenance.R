@@ -64,6 +64,33 @@
   targets::tar_name(default = NA_character_)
 }
 
+# The srcref of the nearest enclosing statement, for a call evaluated lazily as
+# an argument of another call (`add_line(r, record_count(r, "n", x))`): R then
+# attaches no srcref to the inner call's context, but the outer call's context
+# carries the srcref of the statement both sit in. Frames whose srcref points
+# into dctools' own sources (a package loaded with source references) are
+# skipped; they describe dctools code, not the caller's.
+.enclosing_srcref <- function() {
+  pkg_dir <- normalizePath(
+    find.package("dctools", quiet = TRUE),
+    winslash = "/",
+    mustWork = FALSE
+  )
+  calls <- sys.calls()
+  for (k in rev(seq_along(calls))) {
+    srcref <- attr(calls[[k]], "srcref")
+    if (is.null(srcref)) {
+      next
+    }
+    path <- .srcref_path(srcref)
+    own <- length(pkg_dir) == 1L && startsWith(path, paste0(pkg_dir, "/"))
+    if (!is.na(path) && !own) {
+      return(srcref)
+    }
+  }
+  NULL
+}
+
 # Provenance of `call` (a call as returned by sys.call(), which carries the
 # "srcref" of the statement it was made from) made from the frame whose
 # environment is `env` (the caller's parent.frame()).
@@ -80,6 +107,9 @@
     target = .current_target()
   )
   srcref <- attr(call, "srcref")
+  if (is.null(srcref)) {
+    srcref <- .enclosing_srcref()
+  }
   if (!is.null(srcref)) {
     out$file <- .srcref_path(srcref)
     # Lines of parsed text (no file) mean nothing to a reader: leave them NA.
