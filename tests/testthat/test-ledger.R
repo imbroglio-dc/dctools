@@ -131,3 +131,91 @@ test_that("a failed run still gets a ledger; the errored reportable target is un
   expect_false(l$reportable[[1]]$available)
   expect_length(l$provenance, 0L)
 })
+
+# All leaf values of a parsed ledger, with the names on the way down.
+.leaves <- function(x, path = character(0)) {
+  if (is.list(x)) {
+    nms <- names(x)
+    out <- list()
+    for (i in seq_along(x)) {
+      key <- if (!is.null(nms) && nzchar(nms[[i]])) nms[[i]] else NULL
+      out <- c(out, .leaves(x[[i]], c(path, key)))
+    }
+    out
+  } else {
+    list(list(key = if (length(path)) path[[length(path)]] else "", value = x))
+  }
+}
+
+test_that("no reported count value and no error text reaches the ledger", {
+  skip_ledger_fixture()
+  l <- read_fixture_ledger(ledger_fixture())
+  numeric_ok <- c(
+    "line_start",
+    "line_end",
+    "function_line_start",
+    "function_line_end",
+    "exit_code",
+    "schema_version",
+    "n_definitions"
+  )
+  for (leaf in .leaves(l)) {
+    if (is.numeric(leaf$value) && !(leaf$key %in% numeric_ok)) {
+      expect_false(any(leaf$value %in% c(12, 10)), info = leaf$key)
+    }
+  }
+  txt <- paste(
+    readLines(fixture_ledger_path(ledger_fixture(fail = TRUE))),
+    collapse = "\n"
+  )
+  expect_false(grepl("synthetic", txt))
+  expect_true(grepl('"provenance": \\[\\]', txt))
+  expect_true(grepl('"records": \\[\\]', txt))
+})
+
+test_that("a tracked file deleted from the working tree does not abort the ledger", {
+  skip_ledger_fixture()
+  proj <- copy_fixture()
+  local_engine()
+  withr::local_dir(proj)
+  writeLines("extra <- function() 1", "R/extra.R")
+  system2("git", c("add", "-A"), stdout = TRUE)
+  system2("git", c("commit", "-q", "-m", "extra"), stdout = TRUE)
+  file.remove("R/extra.R")
+  out <- write_run_ledger(
+    "docs/new",
+    "20260102-000000",
+    reportable = "evidence",
+    store = "_targets",
+    script = "_targets.R"
+  )
+  l <- jsonlite::read_json(out, simplifyVector = FALSE)
+  expect_false(l$code$clean)
+})
+
+test_that("only the four stamp fields are recorded", {
+  skip_ledger_fixture()
+  proj <- copy_fixture()
+  local_engine()
+  withr::local_dir(proj)
+  html <- readLines("output/record.html")
+  html <- sub('\\}\\} -->', '}, "note": "x"} -->', html)
+  writeLines(html, "output/record2.html")
+  expect_match(paste(html, collapse = ""), "note")
+  out <- write_run_ledger(
+    "docs/new",
+    "20260102-000000",
+    reportable = "evidence",
+    records = "output/record2.html",
+    store = "_targets",
+    script = "_targets.R"
+  )
+  l <- jsonlite::read_json(out, simplifyVector = FALSE)
+  stamp <- l$records[[1]]$stamps[[1]]
+  expect_setequal(
+    names(stamp),
+    c("run_id", "sha", "dctools_version", "objects")
+  )
+  expect_identical(stamp$run_id, fixture_run_id)
+  expect_match(unlist(stamp$objects), "^[0-9a-f]{64}$")
+})

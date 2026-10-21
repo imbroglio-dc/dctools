@@ -116,7 +116,12 @@
 .function_spans <- function(repo) {
   files <- .git(repo, c("ls-files", "--", "*.R"))
   rows <- lapply(files, function(f) {
-    .spans_in_lines(readLines(file.path(repo, f), warn = FALSE), f)
+    full <- file.path(repo, f)
+    # A tracked file deleted from the working tree is reported by code$clean.
+    lines <- if (file.exists(full)) {
+      tryCatch(readLines(full, warn = FALSE), error = function(e) NULL)
+    }
+    if (is.null(lines)) .empty_spans() else .spans_in_lines(lines, f)
   })
   do.call(rbind, c(list(.empty_spans()), rows))
 }
@@ -208,6 +213,27 @@
     list(path = p, sha256 = .sha256_file(p), targets_hash = NA_character_)
   })
   c(from_targets, extra)
+}
+
+# Only the stamp's four known fields; objects holds SHA-256 strings only.
+.whitelist_stamp <- function(stamp) {
+  objects <- stamp$objects
+  if (!is.list(objects)) {
+    objects <- list()
+  }
+  objects <- objects[vapply(
+    objects,
+    function(o) {
+      is.character(o) && length(o) == 1L && grepl("^[0-9a-f]{64}$", o)
+    },
+    logical(1)
+  )]
+  list(
+    run_id = .as_chr(stamp$run_id),
+    sha = .as_chr(stamp$sha),
+    dctools_version = .as_chr(stamp$dctools_version),
+    objects = objects
+  )
 }
 
 .links_block <- function(links) {
@@ -358,7 +384,11 @@ write_run_ledger <- function(
       )
     }),
     records = lapply(records, function(p) {
-      list(path = p, sha256 = .sha256_file(p), stamps = .parse_stamps(p))
+      list(
+        path = p,
+        sha256 = .sha256_file(p),
+        stamps = lapply(.parse_stamps(p), .whitelist_stamp)
+      )
     }),
     provenance = .provenance_block(reports, root),
     unprovenanced = .unprovenanced_block(reports, root)
