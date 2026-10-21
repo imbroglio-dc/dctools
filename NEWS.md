@@ -1,5 +1,19 @@
 # dctools (development version)
 
+* Disclosure-safe reports, ported from sepsis_burn: `create_report()`,
+  `record_count()`, `record_unprinted_count()`, `add_line()`,
+  `add_literal_line()`, `add_data_frame()`, `add_count_table()`,
+  `add_tabulation()`, `declare_linear_relation()`, `declare_sum_relation()`,
+  `run_section()`, `render_report()`, `print_report_section()`. Every count
+  records the source lines and function that computed it; numbers printed
+  without `record_count()` are flagged.
+* Run ledger and audit: `write_run_ledger()` writes a PHI-free JSON index of a
+  targets run; `audit_run()` checks it (C1-C9: code, store, freshness,
+  completeness, inputs, decisions, records, provenance, engine) and writes a
+  one-page verdict and a provenance page; `stamp_record()` stamps rendered
+  records. `run_targets_safe(ledger = )` refuses a dirty working tree, then
+  writes and audits a ledger after every run (new exit status 3: the audit
+  did not pass).
 * Initial package scaffold (renamed from the `helpers` script collection).
 * Project scaffolding: `create_project()` (analysis + package archetypes) and
   `make_file_dirs()`.

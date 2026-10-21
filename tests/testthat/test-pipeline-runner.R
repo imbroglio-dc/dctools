@@ -11,8 +11,14 @@ test_that(".mask_count masks 1 to below-1 only", {
 test_that(".parse_runner_args accepts --names identifiers only", {
   expect_identical(.parse_runner_args(character(0)), character(0))
   expect_identical(.parse_runner_args(c("--names", "a", "b.c")), c("a", "b.c"))
-  expect_error(.parse_runner_args("--names"), class = "dctools_runner_usage_error")
-  expect_error(.parse_runner_args(c("a", "b")), class = "dctools_runner_usage_error")
+  expect_error(
+    .parse_runner_args("--names"),
+    class = "dctools_runner_usage_error"
+  )
+  expect_error(
+    .parse_runner_args(c("a", "b")),
+    class = "dctools_runner_usage_error"
+  )
   expect_error(
     .parse_runner_args(c("--names", "x;y")),
     class = "dctools_runner_usage_error"
@@ -77,20 +83,35 @@ test_that(".format_run_summary appends the run status block", {
     c("-- A --", "line"),
     "d"
   )
-  expect_identical(out, c("== targets ==", "s: built", "== run status ==", "-- A --", "line", "debug directory: d"))
+  expect_identical(
+    out,
+    c(
+      "== targets ==",
+      "s: built",
+      "== run status ==",
+      "-- A --",
+      "line",
+      "debug directory: d"
+    )
+  )
 })
 
 test_that(".prune_debug_runs keeps the newest N run dirs and ignores other names", {
   root <- withr::local_tempdir()
   runs <- sprintf("2026010%d-000000", 1:5)
-  for (r in c(runs, "keep_me")) dir.create(file.path(root, r))
+  for (r in c(runs, "keep_me")) {
+    dir.create(file.path(root, r))
+  }
   removed <- .prune_debug_runs(root, keep = 2L)
   expect_identical(removed, runs[1:3])
   expect_setequal(list.files(root), c(runs[4:5], "keep_me"))
 })
 
 test_that(".run_status_blocks prints finished status targets in order", {
-  progress <- progress_df(c("b_status", "a_status", "c_status"), c("built", "skipped", "errored"))
+  progress <- progress_df(
+    c("b_status", "a_status", "c_status"),
+    c("built", "skipped", "errored")
+  )
   objs <- list(a_status = c("a1", "a2"), b_status = "b1")
   read <- function(name) objs[[name]]
   out <- .run_status_blocks(
@@ -105,7 +126,9 @@ test_that(".run_status_blocks prints finished status targets in order", {
 test_that(".run_status_blocks applies format_status and requires character", {
   progress <- progress_df("s", "built")
   read <- function(name) list(n = 3)
-  out <- .run_status_blocks(progress, c(S = "s"), read, function(x) paste("n =", x$n))
+  out <- .run_status_blocks(progress, c(S = "s"), read, function(x) {
+    paste("n =", x$n)
+  })
   expect_identical(out, c("-- S --", "n = 3"))
   expect_error(
     .run_status_blocks(progress, c(S = "s"), read, NULL),
@@ -115,9 +138,18 @@ test_that(".run_status_blocks applies format_status and requires character", {
 
 test_that(".check_status_targets wants identifier names and values", {
   expect_identical(.check_status_targets(character(0)), character(0))
-  expect_identical(.check_status_targets(c("x_status")), c(x_status = "x_status"))
-  expect_error(.check_status_targets(c(`A B` = "x")), class = "dctools_runner_usage_error")
-  expect_error(.check_status_targets(c(A = "x;y")), class = "dctools_runner_usage_error")
+  expect_identical(
+    .check_status_targets(c("x_status")),
+    c(x_status = "x_status")
+  )
+  expect_error(
+    .check_status_targets(c(`A B` = "x")),
+    class = "dctools_runner_usage_error"
+  )
+  expect_error(
+    .check_status_targets(c(A = "x;y")),
+    class = "dctools_runner_usage_error"
+  )
 })
 
 # In-process failures (no pipeline needed) ---------------------------------------
@@ -253,26 +285,35 @@ test_that("a clean run exits 0 and prints only the allowlist", {
   expect_identical(res$status, 0L, info = res$stdout)
   expect_identical(res$stderr, "")
   lines <- strsplit(res$stdout, "\n")[[1]]
-  expect_true(all(
-    c(
-      "== targets ==",
-      "clean: completed",
-      "prep: completed",
-      "== errors and warnings (detail in the debug directory) ==",
-      "  warned: warnings: <5",
-      "== run status ==",
-      "-- TOY --",
-      "prep: completed",
-      "decisions: 4"
-    ) %in%
-      lines
-  ), info = res$stdout)
-  expect_match(res$stdout, "debug directory: data/processed/debug/[0-9]{8}-[0-9]{6}\n$")
+  expect_true(
+    all(
+      c(
+        "== targets ==",
+        "clean: completed",
+        "prep: completed",
+        "== errors and warnings (detail in the debug directory) ==",
+        "  warned: warnings: <5",
+        "== run status ==",
+        "-- TOY --",
+        "prep: completed",
+        "decisions: 4"
+      ) %in%
+        lines
+    ),
+    info = res$stdout
+  )
+  expect_match(
+    res$stdout,
+    "debug directory: data/processed/debug/[0-9]{8}-[0-9]{6}\n$"
+  )
   expect_false(grepl(leaky, res$stdout))
   dbg <- debug_runs(proj)
   expect_length(dbg, 1L)
   # Positive controls: what stdout held back did reach the debug directory.
-  expect_identical(readLines(file.path(dbg, "warnings_warned.txt")), "warning EARLY-9")
+  expect_identical(
+    readLines(file.path(dbg, "warnings_warned.txt")),
+    "warning EARLY-9"
+  )
   expect_match(
     paste(readLines(file.path(dbg, "tar_make.log")), collapse = "\n"),
     "printed EARLY-8"

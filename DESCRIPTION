@@ -35,6 +35,7 @@ Imports:
 Suggests:
     arrow,
     BiocManager,
+    callr,
     crew,
     dbplyr,
     digest,

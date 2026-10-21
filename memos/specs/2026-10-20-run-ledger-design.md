@@ -16,7 +16,7 @@ A person who did not write a `targets` pipeline, and who does not trust whoever 
 
 | Piece | Written by | Trusted because |
 |------------------------|------------------------|------------------------|
-| Report objects (every printed number) | `dctools` report functions, called from project code | The only way to put a number in a report is `add_count()` / `add_count_table()`, which evaluate the expression themselves and record where they were called from |
+| Report objects (every printed number) | `dctools` report functions, called from project code | The only way to put a number in a report is `record_count()` / `add_count_table()`, which evaluate the expression themselves and record where they were called from |
 | Machine ledger (`<RUN_ID>.json`) | `write_run_ledger()`, called by the project's runner after `tar_make()` | Tested code; holds hashes and locations only, no values; cross-checked against the store, git and the files on disk by the audit |
 | Audit (`<RUN_ID>.md`, `<RUN_ID>.provenance.md`) | `audit_run()`, called by the runner right after the ledger | A fixed catalogue of checks (C1-C9) that the project cannot shorten; each check has a test with a corrupted input that must make it FAIL |
 | `dctools` itself | This repo | Installed from a pushed commit (C9 prints its version and SHA); its tests include the corrupted-input suite |
@@ -35,9 +35,9 @@ The existing report object (an environment accumulating counts, relations, outpu
 
 | sepsis_burn | dctools |
 |------------------------------------|------------------------------------|
-| `new_disclosure_safe_report()` | `create_report(hide_small_counts = TRUE, threshold = 5L, error_sink = NULL)` |
-| `register_count()` | `add_count(report, id, expr, protect = FALSE)` (3.2) |
-| `register_unprinted_count()` | `add_unprinted_count(report, id, expr)` |
+| `new_disclosure_safe_report()` | `create_report(hide_small_counts = TRUE, error_sink = NULL)` |
+| `register_count()` | `record_count(report, id, expr, protect = FALSE)` (3.2) |
+| `register_unprinted_count()` | `record_unprinted_count(report, id, expr)` |
 | `add_count_table()` / `add_tabulation()` | `add_count_table(report, id, expr, ...)` / `add_tabulation(report, id, expr, ...)` |
 | `declare_sum_relation()` / `declare_linear_relation()` | unchanged |
 | `add_line()` / `add_literal_line()` / `add_data_frame()` | unchanged |
@@ -52,25 +52,27 @@ Changes from the port beyond renaming:
 - Every report records `dctools_version` and `hide_small_counts` in the object, so the audit can refuse unmasked reports (3.4, hard stop).
 - The relationship to the existing `suppress_small_cells()` is unchanged: that function masks a finished table; the report masks while building and models relations between counts.
 
+A failed `run_section()` prints only the error's class.
+
 ### 3.2 Provenance capture
 
-`add_count(report, id, expr, protect = FALSE)` evaluates `expr` in the caller's frame, registers the value exactly as `register_count()` did, and records:
+`record_count(report, id, expr, protect = FALSE)` evaluates `expr` in the caller's frame, registers the value exactly as `register_count()` did, and records:
 
 | Field | Source |
 |------------------------------------|------------------------------------|
 | `id` | the registered id (after any `_2` suffixing) |
-| `file`, `line_start`, `line_end` | the source reference of the `add_count()` call, from the call stack |
+| `file`, `line_start`, `line_end` | the source reference of the `record_count()` call, from the call stack |
 | `code` | the source lines of that call, verbatim |
 | `function`, `function_file`, `function_lines` | the enclosing function's name and the source span of its definition |
 | `target` | `targets::tar_name()` when called inside a running target, else `NA` |
 
-`add_count_table()`, `add_tabulation()` and `add_unprinted_count()` record the same fields for every cell id they register.
+`add_count_table()`, `add_tabulation()` and `record_unprinted_count()` record the same fields for every cell id they register.
 
-**Missing source references are failures, not blanks.** R keeps source references only when code is sourced with `keep.source = TRUE` (`Rscript` turns it off by default). When the reference cannot be found, the field is `NA` and C8 fails for that value. An `add_count()` call outside a target records `target = NA`, which C8 also fails.
+**Missing source references are failures, not blanks.** R keeps source references only when code is sourced with `keep.source = TRUE` (`Rscript` turns it off by default). When the reference cannot be found, the field is `NA` and C8 fails for that value. An `record_count()` call outside a target records `target = NA`, which C8 also fails.
 
-**Bare-number guard.** A number printed without going through `add_count()` would have no provenance, for example a value pasted into a string passed to `add_line()`. At render time, every maximal digit run in the printed text that is not part of an identifier-like token (adjacent letters or underscores, as in `J7`, `death_28d`, `D13`) is checked: it must either come from a resolved placeholder, or appear literally in the recorded source code of the call that added that text (a constant written in the code, whose provenance is that line). Anything else is recorded as an unprovenanced number, and C8 fails. **Limit:** a computed value that happens to equal a literal on the same line passes the guard.
+**Bare-number guard.** A number printed without going through `record_count()` would have no provenance, for example a value pasted into a string passed to `add_line()`. At render time, every maximal digit run in the printed text that is not part of an identifier-like token (adjacent letters or underscores, as in `J7`, `death_28d`, `D13`) is checked: it must either come from a resolved placeholder, or appear literally in the recorded source code of the call that added that text (a constant written in the code, whose provenance is that line). Anything else is recorded as an unprovenanced number, and C8 fails. **Limit:** a computed value that happens to equal a literal on the same line passes the guard.
 
-**Feasibility gate.** The first implementation task is a spike confirming that, in R 4.6 under `targets` (callr worker) and `Rscript`, the source reference of the `add_count()` call and the enclosing function's span can be read from the call stack when files are sourced with `keep.source = TRUE`. If they cannot, this spec returns to review before anything else is built.
+**Feasibility gate.** The first implementation task is a spike confirming that, in R 4.6 under `targets` (callr worker) and `Rscript`, the source reference of the `record_count()` call and the enclosing function's span can be read from the call stack when files are sourced with `keep.source = TRUE`. If they cannot, this spec returns to review before anything else is built.
 
 ### 3.3 Machine ledger
 
@@ -140,21 +142,28 @@ Never written: error or warning messages (they can carry row-level values), obje
 
 ## 5. Dependencies
 
-- Imports: add `jsonlite`, `digest` (SHA-256; `tools::sha256sum()` would need `Depends: R (>= 4.5.0)`, a package-wide change not worth making for this). `gert` is already imported.
-- Suggests: add `targets`, `callr`, `quarto` (record stamp tests only).
+- `jsonlite` and `digest` are in Suggests, guarded like the rest of `R/pipeline.R`; `quarto` is not needed. (`digest` is used for SHA-256; `tools::sha256sum()` would need `Depends: R (>= 4.5.0)`.)
+- Suggests also: `targets`, `callr`.
+
+## 5a. Decisions made during implementation
+
+- Provenance for a call evaluated as an argument or lazily (for example inside `run_section()`) is the statement the caller's own function is executing, verified inside that function's file and span; otherwise `NA`, never guessed.
+- C1 requires a full 40-hex commit SHA; C3 fails when the ledger has no `outdated` record; C6 accepts only completed, skipped or built target statuses; C7 requires at least one stamped object and a non-missing run id, commit and hashes. A check with nothing to evaluate is NOT EVALUATED.
+- The ledger whitelists stamp fields (`run_id`, `sha`, `dctools_version`, `objects`). The audit page shows masked values in backticks and prints git commands and links only for a valid 40-hex SHA; the verify block includes a `git show <sha>:<file> | sed -n` command for C1.
+- `run_targets_safe(ledger = )` exit precedence: 2 > 1 > 3 > 0.
 
 ## 6. Out of scope
 
 - Re-auditing or replaying old runs; detecting non-determinism.
 - Parsing any project's decision files (the project passes `links`).
-- The `sepsis_burn` runner, hook, record changes and call-site migration (its own spec).
+- The sepsis_burn hook, record changes and call-site migration (its own spec). The runner integration is `run_targets_safe(ledger = )` in dctools.
 - Proving code correctness.
 
 ## 7. Implementation order
 
 1.  Spike: source-reference capture under `targets` and `Rscript` (feasibility gate, 3.2).
 2.  Port the safe report with its tests (3.1).
-3.  `add_count()` family and provenance (3.2), then the bare-number guard.
+3.  `record_count()` family and provenance (3.2), then the bare-number guard.
 4.  `stamp_record()` (3.5).
 5.  `write_run_ledger()` (3.3) with the fixture pipeline.
 6.  `audit_run()` checks C1-C9 and hard stops (3.4), with the corrupted-input suite.

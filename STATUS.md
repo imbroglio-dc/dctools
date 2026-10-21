@@ -7,7 +7,7 @@ Keep it short — one screen. For durable orientation (vision, principles, shape
 
 # dctools — status
 
-**State:** active · **Updated:** 2026-09-03
+**State:** active · **Updated:** 2026-10-20
 
 ## Current focus
 Demand-driven build of the verification gates (ROADMAP sections 9-12): implement a
@@ -25,6 +25,7 @@ function when a real analysis or its home skill needs the gate, not in roadmap o
 - None open.
 
 ## Recent progress
+- 2026-10-20 — run ledger and audit (`write_run_ledger()`, `audit_run()`, `stamp_record()`) and the disclosure-safe report ported from sepsis_burn with per-count provenance; `run_targets_safe(ledger =)`. Next: sepsis_burn integration spec (migrate its evidence code to `record_count()`, stamp its decision records, guard hook on `docs/runs/`).
 - 2026-09-03 — converted this repo's status doc from `PROJECT.md` + `/project-status`
   to `OVERVIEW.md` + `STATUS.md` + `/update-status`, matching the canonical scheme the
   `biostat-support` router-composition design adopted ecosystem-wide; `scaffold.R`

@@ -42,6 +42,22 @@ reference:
       - create_debug_sink
       - read_debug_status
       - get_debug_dir
+  - title: Disclosure-safe reports
+    contents:
+      - create_report
+      - record_count
+      - record_unprinted_count
+      - add_line
+      - add_count_table
+      - declare_linear_relation
+      - declare_sum_relation
+      - run_section
+      - render_report
+  - title: Run ledger and audit
+    contents:
+      - write_run_ledger
+      - audit_run
+      - stamp_record
   - title: Clinical formulas
     contents:
       - ckd_epi_2021
