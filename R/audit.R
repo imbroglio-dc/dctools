@@ -47,7 +47,7 @@
   detail <- if (n == 0L) {
     empty_reason
   } else {
-    paste0(failed$item, ": ", failed$detail)
+    if (nrow(failed)) paste0(failed$item, ": ", failed$detail) else character(0)
   }
   out <- data.frame(
     check = check,
@@ -132,10 +132,19 @@
 
 .check_code <- function(ledger, repo) {
   sha <- .as_chr(ledger$code$sha)
-  has_commit <- !is.na(sha) &&
+  full_sha <- !is.na(sha) && grepl("^[0-9a-f]{40}$", sha)
+  has_commit <- full_sha &&
     .git_ok(repo, c("cat-file", "-e", paste0(sha, "^{commit}")))
   items <- list(
-    .item("commit", has_commit, "the run's commit is not in this repository"),
+    .item(
+      "commit",
+      has_commit,
+      if (full_sha) {
+        "the run's commit is not in this repository"
+      } else {
+        "the ledger's sha is not a full commit SHA"
+      }
+    ),
     .item(
       "clean tree",
       isTRUE(ledger$code$clean),
@@ -170,6 +179,9 @@
   in_ledger <- vapply(ledger$targets, function(t) .as_chr(t$name), "")
   items <- lapply(ledger$targets, function(t) {
     nm <- .as_chr(t$name)
+    if (is.na(nm)) {
+      return(.item("target", FALSE, "a ledger target has no name"))
+    }
     row <- meta[meta$name == nm, , drop = FALSE]
     if (!nrow(row)) {
       return(.item(nm, FALSE, "not in the store"))
@@ -203,6 +215,7 @@
 # C3 Fresh ----------------------------------------------------------------------
 
 .check_fresh <- function(ledger, script, store) {
+  has_recorded <- is.list(ledger$outdated)
   recorded <- unlist(ledger$outdated)
   now <- targets::tar_outdated(
     script = script,
@@ -214,8 +227,12 @@
     .bind_items(list(
       .item(
         "at run time",
-        !length(recorded),
-        paste("outdated:", paste(recorded, collapse = ", "))
+        has_recorded && !length(recorded),
+        if (has_recorded) {
+          paste("outdated:", paste(recorded, collapse = ", "))
+        } else {
+          "the ledger does not record outdated targets"
+        }
       ),
       .item(
         "now",
