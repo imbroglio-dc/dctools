@@ -5,8 +5,11 @@
   `add_literal_line()`, `add_data_frame()`, `add_count_table()`,
   `add_tabulation()`, `declare_linear_relation()`, `declare_sum_relation()`,
   `run_section()`, `render_report()`, `print_report_section()`. Every count
-  records the source lines and function that computed it; numbers printed
-  without `record_count()` are flagged.
+  records the source lines and function that computed it. Digit runs in text
+  added by `add_line()`, `add_literal_line()`, `add_data_frame()` and
+  `run_section()` titles that come neither from `record_count()` nor from a
+  literal written in the call are recorded by location, and audit check C8
+  fails.
 * Run ledger and audit: `write_run_ledger()` writes a PHI-free JSON index of a
   targets run; `audit_run()` checks it (C1-C9: code, store, freshness,
   completeness, inputs, decisions, records, provenance, engine) and writes a
