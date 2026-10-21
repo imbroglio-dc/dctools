@@ -92,3 +92,11 @@ test_that("stamp_record prints a readable line and a stamp that parses back", {
   )
   expect_identical(stamp$objects$evidence, parsed[[1]]$objects$evidence)
 })
+
+test_that(".strip_credentials removes everything up to the last @ before the host", {
+  expect_identical(
+    .strip_credentials("https://us:p@ss@host/x"),
+    "https://host/x"
+  )
+  expect_identical(.strip_credentials("https://tok@host/x"), "https://host/x")
+})

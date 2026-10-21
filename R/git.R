@@ -41,7 +41,7 @@
   normalizePath(.git(repo, c("rev-parse", "--show-toplevel")), winslash = "/")
 }
 
-.strip_credentials <- function(url) sub("^(https?://)[^/@]+@", "\\1", url)
+.strip_credentials <- function(url) sub("^(https?://)[^/]*@", "\\1", url)
 
 .git_remote <- function(repo) {
   url <- tryCatch(
