@@ -55,6 +55,8 @@
   NA_character_
 }
 
+# requireNamespace (not .require_pkgs) on purpose: no targets means "not in a
+# target" (NA), not an error.
 .current_target <- function() {
   if (!requireNamespace("targets", quietly = TRUE)) {
     return(NA_character_)
@@ -80,9 +82,12 @@
   srcref <- attr(call, "srcref")
   if (!is.null(srcref)) {
     out$file <- .srcref_path(srcref)
-    out$line_start <- as.integer(srcref[[1]])
-    out$line_end <- as.integer(srcref[[3]])
-    out$code <- .srcref_lines(srcref)
+    # Lines of parsed text (no file) mean nothing to a reader: leave them NA.
+    if (!is.na(out$file)) {
+      out$line_start <- as.integer(srcref[[1]])
+      out$line_end <- as.integer(srcref[[3]])
+      out$code <- .srcref_lines(srcref)
+    }
   }
   n <- .frame_of(env)
   if (!is.na(n) && n > 0L) {
@@ -90,8 +95,10 @@
     fn_srcref <- attr(sys.function(n), "srcref")
     if (!is.null(fn_srcref)) {
       out$function_file <- .srcref_path(fn_srcref)
-      out$function_line_start <- as.integer(fn_srcref[[1]])
-      out$function_line_end <- as.integer(fn_srcref[[3]])
+      if (!is.na(out$function_file)) {
+        out$function_line_start <- as.integer(fn_srcref[[1]])
+        out$function_line_end <- as.integer(fn_srcref[[3]])
+      }
     }
   }
   out
