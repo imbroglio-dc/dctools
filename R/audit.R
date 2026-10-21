@@ -542,7 +542,9 @@
 #' Before any check, a reportable target that is not a masked dctools report
 #' stops the audit (class `dctools_audit_unsafe_error`) and nothing is
 #' written. The audit is meant to run immediately after the run, against
-#' the store that run produced.
+#' the store that run produced. Writes `<run_id>.md` (the verdict page) and
+#' `<run_id>.provenance.md` (each reported value with the code that computed
+#' it) next to the ledger.
 #'
 #' @param ledger_path Path to `<run_id>.json`.
 #' @param store,script The targets store and script; default to the
@@ -581,5 +583,6 @@ audit_run <- function(ledger_path, store = NULL, script = NULL, repo = ".") {
     .check_engine(ledger)
   ))
   attr(result, "verdict") <- .verdict(result$status)
+  .write_audit_files(ledger, result, reports, dirname(ledger_path))
   result
 }

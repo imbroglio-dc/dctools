@@ -1,0 +1,91 @@
+scrub <- function(x) {
+  x <- gsub("[0-9a-f]{64}", "<sha256>", x)
+  gsub("[0-9a-f]{40}", "<sha>", x)
+}
+
+run_fixture_audit <- function(proj) {
+  withr::with_dir(
+    proj,
+    audit_run(
+      fixture_ledger_path("."),
+      store = "_targets",
+      script = "_targets.R"
+    )
+  )
+}
+
+test_that("the audit page shows the verdict, one row per check and how to verify by hand", {
+  skip_ledger_fixture()
+  local_engine()
+  proj <- copy_fixture()
+  run_fixture_audit(proj)
+  md <- readLines(file.path(
+    proj,
+    "docs",
+    "runs",
+    paste0(fixture_run_id, ".md")
+  ))
+  expect_identical(md[1], paste0("# Run ", fixture_run_id, " audit: PASS"))
+  expect_length(grep("^\\| C[1-9] \\|", md), 9L)
+  expect_true(any(grepl("https://example.com/o/r/tree/", md, fixed = TRUE)))
+  expect_false(any(grepl("secret", md)))
+  expect_true(any(grepl("'data/raw/input values.csv'", md, fixed = TRUE)))
+  expect_snapshot(cat(scrub(md), sep = "\n"))
+})
+
+test_that("failures are listed, ten at most per check", {
+  skip_ledger_fixture()
+  local_engine()
+  proj <- copy_fixture()
+  edit_ledger(fixture_ledger_path(proj), function(l) {
+    l$links <- lapply(1:12, function(i) {
+      list(
+        decision_id = paste0("X", i),
+        decision_status = "open",
+        target = "nope",
+        role = "evidence"
+      )
+    })
+    l
+  })
+  run_fixture_audit(proj)
+  md <- readLines(file.path(
+    proj,
+    "docs",
+    "runs",
+    paste0(fixture_run_id, ".md")
+  ))
+  expect_true("### C6 Decisions: FAIL" %in% md)
+  expect_true("- ... and 2 more (see the ledger)" %in% md)
+})
+
+test_that("the provenance page shows each masked value with its code and a permalink", {
+  skip_ledger_fixture()
+  local_engine()
+  proj <- copy_fixture()
+  run_fixture_audit(proj)
+  pm <- readLines(file.path(
+    proj,
+    "docs",
+    "runs",
+    paste0(fixture_run_id, ".provenance.md")
+  ))
+  expect_true("## R/evidence.R" %in% pm)
+  expect_true("### build_evidence() (lines 1-8)" %in% pm)
+  expect_true(any(grepl("`evidence` / `n_values` = 12", pm, fixed = TRUE)))
+  expect_true(any(grepl("`evidence` / `n_large` = 10", pm, fixed = TRUE)))
+  expect_true(any(grepl("/blob/[0-9a-f]{40}/R/evidence.R#L4-L4", pm)))
+  expect_true(any(grepl("^  4 \\| ", pm)))
+  expect_snapshot(cat(scrub(pm), sep = "\n"))
+})
+
+test_that(".resolve_value masks small counts and marks unprinted ones", {
+  r <- create_report()
+  record_count(r, "small", 3)
+  record_count(r, "big", 30)
+  record_unprinted_count(r, "~gap", 1)
+  expect_identical(.resolve_value(r, "small"), "<5")
+  expect_identical(.resolve_value(r, "big"), "30")
+  expect_identical(.resolve_value(r, "~gap"), "(not printed)")
+  expect_identical(.resolve_value(NULL, "x"), "(report not available)")
+})

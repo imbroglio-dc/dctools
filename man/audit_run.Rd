@@ -47,7 +47,9 @@ A check with nothing to evaluate is \code{"NOT EVALUATED"}, never \code{"PASS"}.
 Before any check, a reportable target that is not a masked dctools report
 stops the audit (class \code{dctools_audit_unsafe_error}) and nothing is
 written. The audit is meant to run immediately after the run, against
-the store that run produced.
+the store that run produced. Writes \verb{<run_id>.md} (the verdict page) and
+\verb{<run_id>.provenance.md} (each reported value with the code that computed
+it) next to the ledger.
 }
 \examples{
 \dontrun{
