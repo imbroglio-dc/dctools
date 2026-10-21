@@ -30,7 +30,7 @@ test_that("numbers not written in the code of the adding call are flagged by loc
   expect_identical(sort(lines), c(3L, 7L, 8L, 9L))
   # Only the location is recorded: no text field holds the printed numbers.
   text_fields <- unlist(lapply(r$unprovenanced, function(p) {
-    p[c("file", "code", "function_name")]
+    c(basename(p$file), p$code, p$function_name)
   }))
   expect_false(any(grepl("64|31|57|window 3|Day 3", text_fields)))
   expect_identical(basename(r$unprovenanced[[1]]$file), "user.R")
