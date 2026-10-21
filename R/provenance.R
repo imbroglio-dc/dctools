@@ -64,27 +64,38 @@
   targets::tar_name(default = NA_character_)
 }
 
-# The srcref of the nearest enclosing statement, for a call evaluated lazily as
-# an argument of another call (`add_line(r, record_count(r, "n", x))`): R then
-# attaches no srcref to the inner call's context, but the outer call's context
-# carries the srcref of the statement both sit in. Frames whose srcref points
-# into dctools' own sources (a package loaded with source references) are
-# skipped; they describe dctools code, not the caller's.
-.enclosing_srcref <- function() {
-  pkg_dir <- normalizePath(
-    find.package("dctools", quiet = TRUE),
-    winslash = "/",
-    mustWork = FALSE
-  )
+# The srcref of the statement, inside the function running in frame `n` (the
+# caller), that is evaluating the current call. A call forced lazily as an
+# argument of another call (`add_line(r, record_count(r, "n", x))`) has no
+# srcref of its own, but the outer call's context carries the statement's.
+# Only frames made directly from the caller's own frame count (sys.parents()
+# equal to `n`; this includes the block statements of run_section(), which
+# are evaluated in the caller's environment), and the srcref must lie in the
+# caller function's own file and line span. If the caller has no source
+# references, or nothing matches, the result is NULL: never a guess.
+# Must be called with `n` an absolute frame index (from .frame_of()).
+.enclosing_srcref <- function(n) {
+  fn_srcref <- attr(sys.function(n), "srcref")
+  if (is.null(fn_srcref)) {
+    return(NULL)
+  }
+  fn_file <- .srcref_path(fn_srcref)
+  if (is.na(fn_file)) {
+    return(NULL)
+  }
   calls <- sys.calls()
+  parents <- sys.parents()
   for (k in rev(seq_along(calls))) {
-    srcref <- attr(calls[[k]], "srcref")
-    if (is.null(srcref)) {
+    if (k <= n || parents[[k]] != n) {
       next
     }
-    path <- .srcref_path(srcref)
-    own <- length(pkg_dir) == 1L && startsWith(path, paste0(pkg_dir, "/"))
-    if (!is.na(path) && !own) {
+    srcref <- attr(calls[[k]], "srcref")
+    if (
+      !is.null(srcref) &&
+        identical(.srcref_path(srcref), fn_file) &&
+        srcref[[1]] >= fn_srcref[[1]] &&
+        srcref[[3]] <= fn_srcref[[3]]
+    ) {
       return(srcref)
     }
   }
@@ -107,8 +118,9 @@
     target = .current_target()
   )
   srcref <- attr(call, "srcref")
-  if (is.null(srcref)) {
-    srcref <- .enclosing_srcref()
+  n <- .frame_of(env)
+  if (is.null(srcref) && !is.na(n) && n > 0L) {
+    srcref <- .enclosing_srcref(n)
   }
   if (!is.null(srcref)) {
     out$file <- .srcref_path(srcref)
@@ -119,7 +131,6 @@
       out$code <- .srcref_lines(srcref)
     }
   }
-  n <- .frame_of(env)
   if (!is.na(n) && n > 0L) {
     out$function_name <- .call_name(sys.call(n))
     fn_srcref <- attr(sys.function(n), "srcref")

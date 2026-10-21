@@ -86,5 +86,91 @@ test_that("code with no source file records NA source fields, not a crash", {
   )
   p <- env$f()$provenance[["n"]]
   expect_identical(p$file, NA_character_)
+  expect_identical(p$line_start, NA_integer_)
+  expect_identical(p$line_end, NA_integer_)
+  expect_identical(p$code, NA_character_)
   expect_identical(p$function_name, "f")
+})
+
+test_that("a count passed through a wrapper in another file is attributed to the caller", {
+  env <- new.env()
+  source_user_code(
+    c(
+      "note <- function(r, ...) {",
+      "  x <- 1",
+      "  dctools::add_line(r, \"pad \", ...)",
+      "}"
+    ),
+    env = env
+  )
+  # A second file: source_user_code writes user.R in a fresh temp dir each call.
+  source_user_code(
+    c(
+      "build <- function() {",
+      "  r <- dctools::create_report()",
+      "  note(r, dctools::record_count(r, \"n\", 9))",
+      "  r",
+      "}"
+    ),
+    env = env
+  )
+  p <- env$build()$provenance[["n"]]
+  expect_identical(basename(p$file), "user.R")
+  expect_identical(p$line_start, 3L)
+  expect_match(p$code, "note(r, dctools::record_count", fixed = TRUE)
+  expect_identical(p$function_name, "build")
+  expect_identical(c(p$function_line_start, p$function_line_end), c(1L, 5L))
+})
+
+test_that("a caller without source references is never given its caller's lines", {
+  env <- new.env()
+  eval(
+    parse(
+      text = c(
+        "inner <- function() {",
+        "  r <- dctools::create_report()",
+        "  dctools::add_line(r, dctools::record_count(r, 'n', 1))",
+        "  r",
+        "}"
+      ),
+      keep.source = FALSE
+    ),
+    env
+  )
+  source_user_code(
+    c(
+      "outer <- function() {",
+      "  inner()",
+      "}"
+    ),
+    env = env
+  )
+  p <- env$outer()$provenance[["n"]]
+  expect_identical(p$file, NA_character_)
+  expect_identical(p$line_start, NA_integer_)
+  expect_identical(p$line_end, NA_integer_)
+  expect_identical(p$code, NA_character_)
+  expect_identical(p$function_name, "inner")
+})
+
+test_that(".enclosing_srcref selects the statement made from the caller's own frame", {
+  env <- source_user_code(c(
+    "caller <- function() {",
+    "  x <- 1",
+    "  list(probe())",
+    "}",
+    "probe <- function() {",
+    "  dctools:::.enclosing_srcref(dctools:::.frame_of(parent.frame()))",
+    "}"
+  ))
+  srcref <- env$caller()[[1]]
+  expect_identical(as.integer(srcref)[c(1, 3)], c(3L, 3L))
+
+  # The caller itself has no source references: nothing is guessed.
+  bare <- new.env(parent = env)
+  eval(
+    parse(text = "caller2 <- function() list(probe())", keep.source = FALSE),
+    bare
+  )
+  expect_null(bare$caller2()[[1]])
 })
