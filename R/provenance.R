@@ -102,6 +102,18 @@
   NULL
 }
 
+# Whether `srcref` lies in the source of the function running in frame `n`.
+# TRUE when that function has no source references to compare against.
+.within_function <- function(srcref, n) {
+  fn_srcref <- attr(sys.function(n), "srcref")
+  if (is.null(fn_srcref) || is.na(.srcref_path(fn_srcref))) {
+    return(TRUE)
+  }
+  identical(.srcref_path(srcref), .srcref_path(fn_srcref)) &&
+    srcref[[1]] >= fn_srcref[[1]] &&
+    srcref[[3]] <= fn_srcref[[3]]
+}
+
 # Provenance of `call` (a call as returned by sys.call(), which carries the
 # "srcref" of the statement it was made from) made from the frame whose
 # environment is `env` (the caller's parent.frame()).
@@ -119,6 +131,13 @@
   )
   srcref <- attr(call, "srcref")
   n <- .frame_of(env)
+  # A call evaluated lazily inside another function (a promise forced in
+  # run_section(), say) carries the srcref of the forcing statement, which may
+  # lie in other code (dctools itself under load_all()). Only the caller's own
+  # statements count.
+  if (!is.null(srcref) && !is.na(n) && n > 0L && !.within_function(srcref, n)) {
+    srcref <- NULL
+  }
   if (is.null(srcref) && !is.na(n) && n > 0L) {
     srcref <- .enclosing_srcref(n)
   }
@@ -149,4 +168,39 @@
 .store_provenance <- function(report, id, provenance) {
   report$provenance[[id]] <- c(list(id = id), provenance)
   invisible(NULL)
+}
+
+# Bare-number guard ------------------------------------------------------------
+#
+# A number printed without record_count() has no provenance. Text added to a
+# report may contain digits only inside {{placeholders}}, as part of an
+# identifier-like token (J7, death_28d, D13), or as constants written in the
+# source of the call that added the text. Anything else is recorded by
+# location only: the number itself may be a patient-level value.
+
+.bare_numbers <- function(text) {
+  text <- text[!is.na(text)]
+  if (!length(text)) {
+    return(character(0))
+  }
+  text <- gsub(.placeholder_pattern, " ", paste(text, collapse = "\n"))
+  m <- gregexpr(
+    "(?<![A-Za-z0-9_.])[0-9]+(\\.[0-9]+)?(?![A-Za-z0-9_])",
+    text,
+    perl = TRUE
+  )
+  unique(regmatches(text, m)[[1]])
+}
+
+.check_bare_numbers <- function(report, text, call, env) {
+  numbers <- .bare_numbers(text)
+  if (!length(numbers)) {
+    return(invisible(FALSE))
+  }
+  provenance <- .capture_provenance(call, env)
+  if (all(numbers %in% .bare_numbers(provenance$code))) {
+    return(invisible(FALSE))
+  }
+  report$unprovenanced[[length(report$unprovenanced) + 1L]] <- provenance
+  invisible(TRUE)
 }

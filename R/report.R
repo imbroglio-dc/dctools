@@ -240,6 +240,7 @@ declare_sum_relation <- function(report, part_ids, total_id = NULL) {
 #' @export
 add_line <- function(report, ...) {
   text <- paste0(...)
+  .check_bare_numbers(report, text, sys.call(), parent.frame())
   .add_output_step(report, function(resolve) cat(resolve(text), "\n", sep = ""))
 }
 
@@ -248,6 +249,7 @@ add_line <- function(report, ...) {
 #' @export
 add_literal_line <- function(report, text) {
   force(text)
+  .check_bare_numbers(report, text, sys.call(), parent.frame())
   .add_output_step(report, function(resolve) cat(text, "\n", sep = ""))
 }
 
@@ -256,6 +258,12 @@ add_literal_line <- function(report, text) {
 #' @export
 add_data_frame <- function(report, data) {
   force(data)
+  .check_bare_numbers(
+    report,
+    unlist(lapply(data, as.character), use.names = FALSE),
+    sys.call(),
+    parent.frame()
+  )
   .add_output_step(report, function(resolve) {
     resolved <- data
     resolved[] <- lapply(resolved, function(column) {
@@ -425,6 +433,9 @@ run_section <- function(
 ) {
   force(title) # the heading prints later, after loop variables have moved on
   force(section_id)
+  if (heading) {
+    .check_bare_numbers(report, title, sys.call(), parent.frame())
+  }
   previous_section_id <- report$current_section_id
   report$current_section_id <- section_id
   on.exit(report$current_section_id <- previous_section_id, add = TRUE)
