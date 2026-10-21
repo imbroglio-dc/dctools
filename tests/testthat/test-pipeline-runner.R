@@ -176,20 +176,6 @@ skip_end_to_end <- function() {
   if (nzchar(dctools_src())) skip_if_not_installed("pkgload")
 }
 
-# The package source when testing from a checkout (load_all); "" when the
-# tests run against an installed dctools (R CMD check, covr). An installed
-# package also has a DESCRIPTION, so look for the R sources themselves.
-dctools_src <- function() {
-  src <- getNamespaceInfo(asNamespace("dctools"), "path")
-  if (file.exists(file.path(src, "R", "pipeline.R"))) src else ""
-}
-
-load_dctools_line <- paste0(
-  "if (nzchar(Sys.getenv('DCTOOLS_TEST_SRC'))) ",
-  "pkgload::load_all(Sys.getenv('DCTOOLS_TEST_SRC'), quiet = TRUE) ",
-  "else library(dctools)"
-)
-
 make_toy_project <- function(env = parent.frame()) {
   proj <- withr::local_tempdir(.local_envir = env)
   writeLines(
