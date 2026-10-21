@@ -433,3 +433,17 @@ test_that("run_section records its section id, with or without a heading", {
   ))
   expect_identical(out, "y")
 })
+
+test_that("add_count_table: a dimension over max_levels prints only a note", {
+  r <- create_report()
+  res <- withVisible(
+    add_count_table(r, "big", table(letters[1:5]), max_levels = 3L)
+  )
+  expect_false(res$visible)
+  expect_null(res$value)
+  expect_length(r$counts, 0L)
+  out <- capture.output(render_report(r))
+  expect_true("  (5 levels; not printed)" %in% out)
+  expect_false(any(grepl("big", out, fixed = TRUE)))
+  expect_false(any(grepl("^\\s*[a-e]\\s+[0-9]", out)))
+})
