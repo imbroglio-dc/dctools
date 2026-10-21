@@ -81,7 +81,8 @@
   if (.is_missing(remote)) {
     return(NA_character_)
   }
-  url <- sub("^git@([^:]+):", "https://\\1/", remote)
+  url <- .strip_credentials(remote)
+  url <- sub("^git@([^:]+):", "https://\\1/", url)
   url <- sub("^ssh://git@", "https://", url)
   url <- sub("\\.git$", "", url)
   if (grepl("^https?://", url)) url else NA_character_

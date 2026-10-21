@@ -30,7 +30,32 @@ test_that("the audit page shows the verdict, one row per check and how to verify
   expect_true(any(grepl("https://example.com/o/r/tree/", md, fixed = TRUE)))
   expect_false(any(grepl("secret", md)))
   expect_true(any(grepl("'data/raw/input values.csv'", md, fixed = TRUE)))
+  expect_true(any(grepl(
+    "^git show '[0-9a-f]{40}:R/evidence.R' \\| sed -n '4,4p'   # C1: ",
+    md
+  )))
   expect_snapshot(cat(scrub(md), sep = "\n"))
+})
+
+test_that("an invalid commit in the ledger is never put into a command or link", {
+  skip_ledger_fixture()
+  local_engine()
+  proj <- copy_fixture()
+  edit_ledger(fixture_ledger_path(proj), function(l) {
+    l$code$sha <- "x; rm -rf /"
+    l
+  })
+  run_fixture_audit(proj)
+  md <- readLines(file.path(
+    proj,
+    "docs",
+    "runs",
+    paste0(fixture_run_id, ".md")
+  ))
+  expect_false(any(grepl("^git .*rm -rf", md)))
+  expect_false(any(grepl("](", md[grepl("Commit:", md)], fixed = TRUE)))
+  expect_true(any(grepl("not a valid SHA", md, fixed = TRUE)))
+  expect_false(any(grepl("^git ", md)))
 })
 
 test_that("failures are listed, ten at most per check", {
@@ -72,8 +97,8 @@ test_that("the provenance page shows each masked value with its code and a perma
   ))
   expect_true("## R/evidence.R" %in% pm)
   expect_true("### build_evidence() (lines 1-8)" %in% pm)
-  expect_true(any(grepl("`evidence` / `n_values` = 12", pm, fixed = TRUE)))
-  expect_true(any(grepl("`evidence` / `n_large` = 10", pm, fixed = TRUE)))
+  expect_true(any(grepl("`evidence` / `n_values` = `12`", pm, fixed = TRUE)))
+  expect_true(any(grepl("`evidence` / `n_large` = `10`", pm, fixed = TRUE)))
   expect_true(any(grepl("/blob/[0-9a-f]{40}/R/evidence.R#L4-L4", pm)))
   expect_true(any(grepl("^  4 \\| ", pm)))
   expect_snapshot(cat(scrub(pm), sep = "\n"))
@@ -88,4 +113,51 @@ test_that(".resolve_value masks small counts and marks unprinted ones", {
   expect_identical(.resolve_value(r, "big"), "30")
   expect_identical(.resolve_value(r, "~gap"), "(not printed)")
   expect_identical(.resolve_value(NULL, "x"), "(report not available)")
+})
+
+test_that("masked values are code-formatted so markdown does not swallow them", {
+  r <- create_report()
+  record_count(r, "small", 3)
+  ledger <- list(
+    run = list(run_id = "r1"),
+    code = list(sha = strrep("a", 40), remote = "https://example.com/o/r.git"),
+    provenance = list(list(
+      report = "rep",
+      id = "small",
+      file = "R/x.R",
+      function_name = "f",
+      function_line_start = 1L,
+      function_line_end = 3L,
+      line_start = 2L,
+      line_end = 2L,
+      code = "record_count(r, 'small', 3)"
+    ))
+  )
+  pm <- .render_provenance_md(ledger, list(rep = r))
+  expect_true(
+    "- `rep` / `small` = `<5` ([L2-L2](https://example.com/o/r/blob/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/R/x.R#L2-L2))" %in%
+      pm
+  )
+})
+
+test_that("a failed check with no detail lists no empty bullet", {
+  ledger <- list(run = list(run_id = "r1"), code = list(sha = strrep("a", 40)))
+  result <- data.frame(
+    check = "C1",
+    name = "Code",
+    status = "FAIL",
+    n_evaluated = 1L,
+    n_failed = 1L
+  )
+  result$detail <- list(character(0))
+  attr(result, "verdict") <- "FAIL"
+  md <- .render_audit_md(ledger, result)
+  expect_false("- " %in% md)
+})
+
+test_that(".web_url strips credentials", {
+  expect_identical(
+    .web_url("https://u:tok@github.com/o/r.git"),
+    "https://github.com/o/r"
+  )
 })
