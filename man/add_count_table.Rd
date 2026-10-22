@@ -28,7 +28,8 @@ add_tabulation(
 \arguments{
 \item{report}{A report from \code{\link[=create_report]{create_report()}}.}
 
-\item{id}{Prefix of the cell ids (\code{"<id>.1"}, \code{"<id>.2"}, ...).}
+\item{id}{Prefix of the cell ids (\code{"<id>.1"}, \code{"<id>.2"}, ...); a letter,
+then letters, digits, \verb{_} or \code{.}.}
 
 \item{expr}{For \code{add_count_table()}, an expression giving a table (or
 array) of counts; for \code{add_tabulation()}, a vector to tabulate.}
@@ -36,8 +37,10 @@ array) of counts; for \code{add_tabulation()}, a vector to tabulate.}
 \item{protect}{Keep the cells visible if at all possible.}
 
 \item{labels_from_code}{\code{TRUE} when the dimension labels are constants in
-the code; otherwise labels that are not short and identifier-like print
-as \code{"<other>"}.}
+the code; they are then printed as they are, outside any protection.
+Otherwise (the default) a label that is not short and identifier-like,
+or that holds a bare number (\code{"31"}, \code{"1985-03-12"}; digits right after a
+letter or underscore, as in \code{"J7"}, are allowed), prints as \code{"<other>"}.}
 
 \item{total_id}{\code{NULL} or the id of a registered count equal to the sum of
 all cells.}

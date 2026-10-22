@@ -240,6 +240,46 @@ test_that("labels: only short identifier-like labels are printed", {
   )
 })
 
+test_that("labels from data holding a bare number print as <other>", {
+  expect_equal(
+    .sanitize_labels(c("31", "57", "1985-03-12", "J7", "a b.c-d_1", NA)),
+    c("<other>", "<other>", "<other>", "J7", "a b.c-d_1", NA)
+  )
+  r <- create_report()
+  add_tabulation(r, "age", c(31, 31, 57))
+  out <- paste(capture.output(render_report(r)), collapse = "\n")
+  expect_false(grepl("31|57", out))
+  r2 <- create_report()
+  add_tabulation(r2, "flag", c(0, 1, 1), labels_from_code = TRUE)
+  expect_match(
+    paste(capture.output(render_report(r2)), collapse = "\n"),
+    "0 +1"
+  )
+})
+
+test_that("count ids must be identifier-like", {
+  r <- create_report()
+  for (bad in c("a b", "1n", "n-1", "", "n{{x}}", "~")) {
+    expect_error(record_count(r, bad, 1), class = "dctools_report_id_error")
+  }
+  expect_error(
+    record_unprinted_count(r, "~a b", 1),
+    class = "dctools_report_id_error"
+  )
+  expect_error(
+    add_count_table(r, "t 1", table(c("a", "b"))),
+    class = "dctools_report_id_error"
+  )
+  expect_error(
+    add_tabulation(r, "t-1", c("a", "b")),
+    class = "dctools_report_id_error"
+  )
+  expect_identical(record_count(r, "n_ok.2", 1), "{{n_ok.2}}")
+  expect_identical(record_unprinted_count(r, "~gap", 1), "~gap")
+  add_count_table(r, "tab", table(c("a", "b")))
+  expect_true(all(c("tab.1", "tab.2") %in% names(r$counts)))
+})
+
 test_that("section: a failure prints only its class, warnings are only counted", {
   report <- create_report()
   run_section(report, "boom", stop(strrep("z", 900)))

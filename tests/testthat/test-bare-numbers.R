@@ -89,3 +89,43 @@ test_that("a caller with no source file gets NA location, not the forcing code's
   expect_identical(counts$code, NA_character_)
   expect_identical(counts$line_start, NA_integer_)
 })
+
+test_that("only digits preceded by a letter or underscore are identifier-like", {
+  expect_identical(.bare_numbers("J7, death_28d, D13 and n42"), character(0))
+  expect_identical(.bare_numbers("los 64d"), "64")
+  expect_identical(.bare_numbers("took 45min"), "45")
+  expect_identical(.bare_numbers("p = .031"), "031")
+  expect_identical(.bare_numbers("J77"), character(0))
+})
+
+test_that("computed numbers glued to units or after a dot are flagged; literals are not", {
+  env <- source_user_code(c(
+    "build <- function(x) {",
+    "  r <- dctools::create_report()",
+    "  dctools::add_line(r, 'los ', max(x), 'd')",
+    "  dctools::add_line(r, 'within 48h')",
+    "  dctools::add_line(r, 'J7, death_28d, D13, n42')",
+    "  dctools::add_line(r, 'p = ', sub('^0', '', format(x[1] / 1000)))",
+    "  r",
+    "}"
+  ))
+  r <- env$build(c(31, 57, 64))
+  lines <- vapply(r$unprovenanced, function(p) p$line_start, integer(1))
+  expect_identical(sort(lines), c(3L, 6L))
+})
+
+test_that("a data frame's computed column names are guarded like its cells", {
+  env <- source_user_code(c(
+    "build <- function(x) {",
+    "  r <- dctools::create_report()",
+    "  df <- data.frame(a = 'x')",
+    "  names(df) <- as.character(sum(x))",
+    "  dctools::add_data_frame(r, df)",
+    "  dctools::add_data_frame(r, data.frame(group = 'A'))",
+    "  r",
+    "}"
+  ))
+  r <- env$build(c(31, 57, 64))
+  lines <- vapply(r$unprovenanced, function(p) p$line_start, integer(1))
+  expect_identical(lines, 5L)
+})

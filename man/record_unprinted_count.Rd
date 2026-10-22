@@ -9,7 +9,8 @@ record_unprinted_count(report, id, expr)
 \arguments{
 \item{report}{A report from \code{\link[=create_report]{create_report()}}.}
 
-\item{id}{The quantity's id; must start with \code{"~"}.}
+\item{id}{The quantity's id: \code{"~"}, a letter, then letters, digits, \verb{_}
+or \code{.}.}
 
 \item{expr}{The expression computing it.}
 }

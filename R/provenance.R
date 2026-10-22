@@ -213,10 +213,11 @@
 # Bare-number guard ------------------------------------------------------------
 #
 # A number printed without record_count() has no provenance. Text added to a
-# report may contain digits only inside {{placeholders}}, as part of an
-# identifier-like token (J7, death_28d, D13), or as constants written in the
-# source of the call that added the text. Anything else is recorded by
-# location only: the number itself may be a patient-level value.
+# report may contain digits only inside {{placeholders}}, right after a letter
+# or underscore (J7, death_28d, D13, n42), or as constants written in the
+# source of the call that added the text. Digits followed by letters ("64d",
+# "45min") or after a dot (".031") are bare numbers. Anything else is recorded
+# by location only: the number itself may be a patient-level value.
 
 .bare_numbers <- function(text) {
   text <- text[!is.na(text)]
@@ -225,7 +226,7 @@
   }
   text <- gsub(.placeholder_pattern, " ", paste(text, collapse = "\n"))
   m <- gregexpr(
-    "(?<![A-Za-z0-9_.])[0-9]+(\\.[0-9]+)?(?![A-Za-z0-9_])",
+    "(?<![A-Za-z0-9_])[0-9]+(\\.[0-9]+)?",
     text,
     perl = TRUE
   )

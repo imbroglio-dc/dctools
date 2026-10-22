@@ -9,8 +9,10 @@ record_count(report, id, expr, protect = FALSE)
 \arguments{
 \item{report}{A report from \code{\link[=create_report]{create_report()}}.}
 
-\item{id}{The count's id. If \code{id} is already registered with a different
-value, \code{"id_2"}, \code{"id_3"}, ... is used instead.}
+\item{id}{The count's id: a letter, then letters, digits, \verb{_} or \code{.}
+(anything else is an error of class \code{dctools_report_id_error}). If \code{id}
+is already registered with a different value, \code{"id_2"}, \code{"id_3"}, ...
+is used instead.}
 
 \item{expr}{The expression computing the count.}
 

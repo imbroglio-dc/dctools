@@ -83,6 +83,29 @@ create_report <- function(hide_small_counts = TRUE, error_sink = NULL) {
   }
 }
 
+.count_id_pattern <- "^~?[A-Za-z][A-Za-z0-9_.]*$"
+
+# Ids reach the ledger, the audit pages and C8's details, so they are
+# identifier-like: a letter, then letters, digits, "_" or "." ("~" first for
+# an unprinted quantity).
+.check_count_id <- function(id) {
+  if (
+    !is.character(id) ||
+      length(id) != 1L ||
+      is.na(id) ||
+      !grepl(.count_id_pattern, id)
+  ) {
+    cli::cli_abort(
+      c(
+        "A count id must be one string matching {.code {(.count_id_pattern)}}.",
+        "i" = "Start with a letter; use letters, digits, {.code _} and {.code .}."
+      ),
+      class = "dctools_report_id_error"
+    )
+  }
+  invisible(id)
+}
+
 # Registering an existing id with a different value creates a new id
 # ("id_2", ...) instead of overwriting. Returns the id used.
 .register_count <- function(report, id, value, protect = FALSE) {
@@ -115,8 +138,10 @@ create_report <- function(hide_small_counts = TRUE, error_sink = NULL) {
 #' `keep.source = TRUE`).
 #'
 #' @param report A report from [create_report()].
-#' @param id The count's id. If `id` is already registered with a different
-#'   value, `"id_2"`, `"id_3"`, ... is used instead.
+#' @param id The count's id: a letter, then letters, digits, `_` or `.`
+#'   (anything else is an error of class `dctools_report_id_error`). If `id`
+#'   is already registered with a different value, `"id_2"`, `"id_3"`, ...
+#'   is used instead.
 #' @param expr The expression computing the count.
 #' @param protect Keep this count visible if at all possible (results the
 #'   reader must see, such as cohort sizes).
@@ -130,6 +155,7 @@ create_report <- function(hide_small_counts = TRUE, error_sink = NULL) {
 record_count <- function(report, id, expr, protect = FALSE) {
   call <- sys.call()
   env <- parent.frame()
+  .check_count_id(id)
   id <- .register_count(report, id, expr, protect)
   .store_provenance(report, id, .capture_provenance(call, env))
   paste0("{{", id, "}}")
@@ -138,7 +164,8 @@ record_count <- function(report, id, expr, protect = FALSE) {
 #' Record a quantity used in relations but never printed
 #'
 #' @param report A report from [create_report()].
-#' @param id The quantity's id; must start with `"~"`.
+#' @param id The quantity's id: `"~"`, a letter, then letters, digits, `_`
+#'   or `.`.
 #' @param expr The expression computing it.
 #' @return `id`, invisibly.
 #' @seealso [declare_linear_relation()].
@@ -150,6 +177,7 @@ record_unprinted_count <- function(report, id, expr) {
   call <- sys.call()
   env <- parent.frame()
   .stop_if_prepared(report)
+  .check_count_id(id)
   stopifnot(startsWith(id, "~"))
   report$unprinted_counts[id] <- as.numeric(expr)
   .store_provenance(report, id, .capture_provenance(call, env))
@@ -260,7 +288,7 @@ add_data_frame <- function(report, data) {
   force(data)
   .check_bare_numbers(
     report,
-    unlist(lapply(data, as.character), use.names = FALSE),
+    c(names(data), unlist(lapply(data, as.character), use.names = FALSE)),
     sys.call(),
     parent.frame()
   )
@@ -273,12 +301,24 @@ add_data_frame <- function(report, data) {
   })
 }
 
-# Labels that come from data print only if they are short and identifier-like.
+# Labels that come from data print only if they are short and identifier-like
+# and hold no bare number (an age, a date): digits are allowed only right
+# after a letter or underscore, as in "J7" or "a_1".
 .sanitize_labels <- function(labels) {
+  has_number <- vapply(
+    labels,
+    function(l) length(.bare_numbers(l)) > 0L,
+    logical(1),
+    USE.NAMES = FALSE
+  )
   ifelse(
     is.na(labels),
     NA_character_,
-    ifelse(grepl("^[A-Za-z0-9_ .-]{1,20}$", labels), labels, "<other>")
+    ifelse(
+      grepl("^[A-Za-z0-9_ .-]{1,20}$", labels) & !has_number,
+      labels,
+      "<other>"
+    )
   )
 }
 
@@ -292,6 +332,7 @@ add_data_frame <- function(report, data) {
   max_levels,
   provenance = NULL
 ) {
+  .check_count_id(id)
   dimensions <- dim(counts)
   if (any(dimensions > max_levels)) {
     note <- paste0(
@@ -336,13 +377,16 @@ add_data_frame <- function(report, data) {
 #' not printed; only a note is added.
 #'
 #' @param report A report from [create_report()].
-#' @param id Prefix of the cell ids (`"<id>.1"`, `"<id>.2"`, ...).
+#' @param id Prefix of the cell ids (`"<id>.1"`, `"<id>.2"`, ...); a letter,
+#'   then letters, digits, `_` or `.`.
 #' @param expr For `add_count_table()`, an expression giving a table (or
 #'   array) of counts; for `add_tabulation()`, a vector to tabulate.
 #' @param protect Keep the cells visible if at all possible.
 #' @param labels_from_code `TRUE` when the dimension labels are constants in
-#'   the code; otherwise labels that are not short and identifier-like print
-#'   as `"<other>"`.
+#'   the code; they are then printed as they are, outside any protection.
+#'   Otherwise (the default) a label that is not short and identifier-like,
+#'   or that holds a bare number (`"31"`, `"1985-03-12"`; digits right after a
+#'   letter or underscore, as in `"J7"`, are allowed), prints as `"<other>"`.
 #' @param total_id `NULL` or the id of a registered count equal to the sum of
 #'   all cells.
 #' @param max_levels The largest number of levels a printed dimension may
