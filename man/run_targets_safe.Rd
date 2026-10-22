@@ -46,10 +46,11 @@ the current time.}
 (see \code{\link[=write_run_ledger]{write_run_ledger()}} and \code{\link[=audit_run]{audit_run()}}): \code{dir} (default
 \code{"docs/runs"}), \code{reportable}, \code{links}, \code{extra_inputs}, \code{documents},
 \code{records}. With a ledger, a working tree with uncommitted or untracked
-files outside \code{dir} is refused before the pipeline runs (runner failure
-\code{dctools_runner_dirty_tree_error}); after the run the ledger is written
-and audited, and stdout gains an \verb{== audit ==} block with one line per
-check, the verdict and the ledger's path.}
+files other than \code{dir} and the declared \code{records} is refused before the
+pipeline runs (runner failure \code{dctools_runner_dirty_tree_error}), so the
+targets store and debug output must be git-ignored; after the run the
+ledger is written and audited, and stdout gains an \verb{== audit ==} block
+with one line per check, the verdict and the ledger's path.}
 }
 \value{
 The exit status, invisibly: \code{0L} when every target succeeded (and,

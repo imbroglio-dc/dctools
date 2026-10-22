@@ -36,18 +36,29 @@ object match the store.
 \item \strong{C5 Inputs}: every input and document still has its recorded SHA-256.
 \item \strong{C6 Decisions}: every decision links to a target that was built.
 \item \strong{C7 Records}: every rendered record is unchanged and stamped with this
-run, its commit and the objects it read.
-\item \strong{C8 Provenance}: every reported value has complete provenance, and no
-number was printed without it.
+run and its commit, and every object its stamp names is an available
+reportable report at the ledger's hash.
+\item \strong{C8 Provenance}: every reportable target is available, every reported
+value has complete provenance, and no number was printed without it.
 \item \strong{C9 Engine}: dctools was installed from a pushed commit, and the
 audit ran under the same dctools as the run.
 }
 
+\strong{Not covered.} Record content that does not come from a dctools report
+(anything a record reads or computes without stamping it) is not checked.
+Numbers enter a report through \code{\link[=record_count]{record_count()}} and its siblings; project
+code that edits a report's internal fields directly is not detected, which
+is a matter for code review (the provenance page points reviewers at the
+code). C9 is computed by the installed dctools it vouches for; the
+\code{RemoteSha} command in the verify-by-hand block is the independent check.
+
 A check with nothing to evaluate is \code{"NOT EVALUATED"}, never \code{"PASS"}.
 Before any check, a reportable target that is not a masked dctools report
 stops the audit (class \code{dctools_audit_unsafe_error}) and nothing is
-written. The audit is meant to run immediately after the run, against
-the store that run produced. Writes \verb{<run_id>.md} (the verdict page) and
+written; so does a ledger whose run id is not \code{YYYYMMDD-HHMMSS} (class
+\code{dctools_audit_run_id_error}). The audit is meant to run immediately
+after the run, against the store that run produced. Writes \verb{<run_id>.md}
+(the verdict page) and
 \verb{<run_id>.provenance.md} (each reported value with the code that computed
 it) next to the ledger.
 }

@@ -23,7 +23,9 @@ A report is an environment that accumulates counts, relations between
 them and output, and prints them with small counts hidden (see
 \code{\link[=render_report]{render_report()}}). Counts enter only through \code{\link[=record_count]{record_count()}},
 \code{\link[=record_unprinted_count]{record_unprinted_count()}}, \code{\link[=add_count_table]{add_count_table()}} and \code{\link[=add_tabulation]{add_tabulation()}},
-which also record the source lines that computed each one.
+which also record the source lines that computed each one. Editing the
+report's internal fields directly (its counts, provenance or output) is
+not detected by the audit; it is a matter for code review.
 }
 \examples{
 r <- create_report()

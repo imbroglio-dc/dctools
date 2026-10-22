@@ -5,18 +5,29 @@
   `add_literal_line()`, `add_data_frame()`, `add_count_table()`,
   `add_tabulation()`, `declare_linear_relation()`, `declare_sum_relation()`,
   `run_section()`, `render_report()`, `print_report_section()`. Every count
-  records the source lines and function that computed it. Digit runs in text
-  added by `add_line()`, `add_literal_line()`, `add_data_frame()` and
+  records the source lines and function that computed it; count ids must be
+  identifier-like. Digit runs in text added by `add_line()`,
+  `add_literal_line()`, `add_data_frame()` (cells and column names) and
   `run_section()` titles that come neither from `record_count()` nor from a
   literal written in the call are recorded by location, and audit check C8
-  fails.
+  fails. Only digits right after a letter or underscore (`J7`, `death_28d`,
+  `n42`) are exempt; `64d`, `45min` and `.031` count as bare numbers.
+  Count-table labels from data that hold a bare number print as `<other>`
+  (`labels_from_code = TRUE` labels are printed as given). Numbers enter a
+  report through `record_count()` and its siblings; direct edits of a
+  report's internal fields are not detected and are a code-review matter.
 * Run ledger and audit: `write_run_ledger()` writes a PHI-free JSON index of a
   targets run; `audit_run()` checks it (C1-C9: code, store, freshness,
   completeness, inputs, decisions, records, provenance, engine) and writes a
   one-page verdict and a provenance page; `stamp_record()` stamps rendered
-  records. `run_targets_safe(ledger = )` refuses a dirty working tree, then
-  writes and audits a ledger after every run (new exit status 3: the audit
-  did not pass).
+  records. `run_targets_safe(ledger = )` refuses a dirty working tree
+  (ignoring the ledger directory and the declared records; the targets store
+  and debug output must be git-ignored), then writes and audits a ledger
+  after every run (new exit status 3: the audit did not pass). C7 accepts
+  only stamped objects that are available reportable reports, and C8 fails a
+  reportable target that is not available. Record content outside dctools
+  reports (anything a record reads without stamping it) is not covered by
+  the audit.
 * Initial package scaffold (renamed from the `helpers` script collection).
 * Project scaffolding: `create_project()` (analysis + package archetypes) and
   `make_file_dirs()`.

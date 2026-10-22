@@ -8,6 +8,10 @@
 
 .max_listed <- 10L
 
+# The verify block is an `sh` code block: quote for sh on every platform
+# (shQuote() defaults to cmd quoting on Windows).
+.sh_quote <- function(x) shQuote(x, type = "sh")
+
 .is_sha <- function(x) {
   !is.na(x) && grepl("^[0-9a-f]{40}$", x)
 }
@@ -105,7 +109,7 @@
     if (sha_ok && length(c1)) {
       sprintf(
         "git show %s | sed -n '%d,%dp'   # C1: compare with the code in %s.provenance.md",
-        shQuote(paste0(sha, ":", c1$file)),
+        .sh_quote(paste0(sha, ":", c1$file)),
         c1$start,
         c1$end,
         run_id
@@ -114,7 +118,7 @@
     if (length(files)) {
       sprintf(
         "sha256sum %s   # C5: compare with \"sha256\" in %s.json",
-        paste(shQuote(files), collapse = " "),
+        paste(.sh_quote(files), collapse = " "),
         run_id
       )
     },
@@ -128,7 +132,7 @@
     f <- .as_chr(p$file)
     start <- .int_or_na(p$line_start)
     end <- .int_or_na(p$line_end)
-    if (!is.na(f) && !is.na(start) && !is.na(end) && !startsWith(f, "/")) {
+    if (!is.na(f) && !is.na(start) && !is.na(end) && !.is_absolute(f)) {
       return(list(file = f, start = start, end = end))
     }
   }
@@ -171,6 +175,15 @@
   if (!length(prov)) {
     return(c(out, "", "No reported values."))
   }
+  # Masking is always recomputed by dctools: a resolver or decision stored in
+  # the loaded object could be stale or tampered with.
+  for (report in reports) {
+    if (inherits(report, "dctools_report")) {
+      report$resolver <- NULL
+      report$decision <- NULL
+      report$is_rendered <- FALSE
+    }
+  }
   files <- vapply(prov, function(p) .as_chr(p$file), "")
   files[is.na(files)] <- "(no source file)"
   for (f in sort(unique(files))) {
@@ -184,8 +197,12 @@
         out,
         "",
         sprintf(
-          "### %s() (lines %s-%s)",
-          fn,
+          "### %s (lines %s-%s)",
+          if (fn %in% c("(anonymous function)", "(no function)")) {
+            fn
+          } else {
+            paste0(fn, "()")
+          },
           .as_chr(first$function_line_start),
           .as_chr(first$function_line_end)
         )

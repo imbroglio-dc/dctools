@@ -16,7 +16,7 @@ A person who did not write a `targets` pipeline, and who does not trust whoever 
 
 | Piece | Written by | Trusted because |
 |------------------------|------------------------|------------------------|
-| Report objects (every printed number) | `dctools` report functions, called from project code | The only way to put a number in a report is `record_count()` / `add_count_table()`, which evaluate the expression themselves and record where they were called from |
+| Report objects (every printed number) | `dctools` report functions, called from project code | Numbers enter a report through `record_count()` / `add_count_table()` and their siblings, which evaluate the expression themselves and record where they were called from. Project code that edits a report's internal fields directly (`r$counts`, `r$unprovenanced`, output steps) is not detected: that is a code-review matter, and the provenance page points reviewers at the code |
 | Machine ledger (`<RUN_ID>.json`) | `write_run_ledger()`, called by the project's runner after `tar_make()` | Tested code; holds hashes and locations only, no values; cross-checked against the store, git and the files on disk by the audit |
 | Audit (`<RUN_ID>.md`, `<RUN_ID>.provenance.md`) | `audit_run()`, called by the runner right after the ledger | A fixed catalogue of checks (C1-C9) that the project cannot shorten; each check has a test with a corrupted input that must make it FAIL |
 | `dctools` itself | This repo | Installed from a pushed commit (C9 prints its version and SHA); its tests include the corrupted-input suite |
@@ -70,7 +70,9 @@ A failed `run_section()` prints only the error's class.
 
 **Missing source references are failures, not blanks.** R keeps source references only when code is sourced with `keep.source = TRUE` (`Rscript` turns it off by default). When the reference cannot be found, the field is `NA` and C8 fails for that value. A `record_count()` call outside a target records `target = NA`, which C8 also fails.
 
-**Bare-number guard.** A number printed without going through `record_count()` would have no provenance, for example a value pasted into a string passed to `add_line()`. The guard runs only on text added through `add_line()`, `add_literal_line()`, `add_data_frame()` and `run_section()` titles. At render time, every maximal digit run in that text that is not part of an identifier-like token (adjacent letters or underscores, as in `J7`, `death_28d`, `D13`) is checked: it must either come from a resolved placeholder, or appear literally in the recorded source code of the call that added that text (a constant written in the code, whose provenance is that line). Anything else is recorded as an unprovenanced number, and C8 fails. **Limit:** a computed value that happens to equal a literal on the same line passes the guard.
+**Bare-number guard.** A number printed without going through `record_count()` would have no provenance, for example a value pasted into a string passed to `add_line()`. The guard runs only on text added through `add_line()`, `add_literal_line()`, `add_data_frame()` and `run_section()` titles. At render time, every maximal digit run in that text that is not identifier-embedded (immediately preceded by a letter or underscore, as in `J7`, `death_28d`, `D13`, `n42`) is checked: it must either come from a resolved placeholder, or appear literally in the recorded source code of the call that added that text (a constant written in the code, whose provenance is that line). Anything else is recorded as an unprovenanced number, and C8 fails. Digits followed by letters (`64d`, `45min`) or after a dot (`.031`) are bare numbers, still allowed when written literally in the call. `add_data_frame()` text includes the column names. **Limit:** a computed value that happens to equal a literal on the same line passes the guard.
+
+**Count-table labels.** Labels from data (`labels_from_code = FALSE`) print as `<other>` unless they are short, identifier-like and hold no bare number by the rule above (`31` and `1985-03-12` become `<other>`; `J7` stays). Labels declared as coming from the code (`labels_from_code = TRUE`) are printed as given, outside this protection.
 
 **Feasibility gate.** The first implementation task is a spike confirming that, in R 4.6 under `targets` (callr worker) and `Rscript`, the source reference of the `record_count()` call and the enclosing function's span can be read from the call stack when files are sourced with `keep.source = TRUE`. If they cannot, this spec returns to review before anything else is built.
 
@@ -80,8 +82,8 @@ A failed `run_section()` prints only the error's class.
 
 | Block | Contents |
 |------------------------------------|------------------------------------|
-| `schema_version`, `run` | `1`; run id, start and finish times, targets requested, runner exit code (passed in) |
-| `code` | git SHA, remote URL, `clean` (from `git status --porcelain`, ignoring the ledger directory), R version, SHA-256 of `renv.lock` if present, `dctools` version and `RemoteSha` |
+| `schema_version`, `run` | `1`; run id, the time the ledger was written (`written`), targets requested, runner exit code (passed in) |
+| `code` | git SHA, remote URL, `clean` (from `git status --porcelain`, ignoring the ledger directory and the declared `records`, which the run rewrites and C7 vouches for; the store and debug output must be git-ignored), R version, SHA-256 of `renv.lock` if present, `dctools` version and `RemoteSha` |
 | `inputs` | every `format = "file"` target: path, independent SHA-256, `targets` data hash; plus `extra_inputs` (files the pipeline reads that are not file targets): path and SHA-256 |
 | `documents` | decision and configuration files the project names: path and SHA-256 |
 | `targets` | per target: name, status (built / skipped / errored / canceled), command, depend and data hashes, upstream targets, and the project functions its command calls, each with file and line span |
@@ -109,15 +111,17 @@ Never written: error or warning messages (they can carry row-level values), obje
 | C4 Complete | no target errored or was canceled |
 | C5 Inputs | recomputed SHA-256 of every input and document equals the ledger's |
 | C6 Decisions | every decision in `links` has at least one target; every linked target exists in the ledger and is built or up to date |
-| C7 Records | every record file's SHA-256 equals the ledger's; each record's stamp names this run id and SHA, and its object hashes equal the ledger's `reportable` hashes |
-| C8 Provenance | every printed value in every reportable report has complete provenance (3.2); no unprovenanced numbers |
+| C7 Records | every record file's SHA-256 equals the ledger's; each record's stamp names this run id and SHA; every object the stamp names is a reportable target whose report was loaded, and its hash equals the ledger's `reportable` hash and the store's |
+| C8 Provenance | every target listed as reportable has a loaded report (a mistyped, unbuilt or errored one fails); every printed value in every reportable report has complete provenance (3.2); no unprovenanced numbers |
 | C9 Engine | `dctools` has a `RemoteSha` (installed from a pushed commit) and its version and SHA are printed |
 
 **Status per check:** `PASS`, `FAIL`, or `NOT EVALUATED` (nothing to evaluate, or a prerequisite failed; the reason is in `detail`). A check never passes vacuously. **Verdict:** `PASS` only when all nine pass; otherwise `FAIL` if any failed, else `INCOMPLETE`.
 
+**Not covered.** Record content outside dctools reports (anything a record reads or computes without stamping it) is not checked by the audit: C7 vouches only for the stamped reportable reports. C9 is computed by the installed `dctools` it vouches for; the `RemoteSha` command in the verify-by-hand block is the independent check.
+
 ### 3.5 Record stamp
 
-`stamp_record(store, targets_read)` is called in a project's Quarto record. It prints a short human-readable block (run id from the `DCTOOLS_RUN_ID` environment variable, git SHA, `dctools` version) and embeds the same data, plus the SHA-256 of each stored object file it read, in a machine-readable HTML comment (`<!-- dctools-stamp {json} -->`) that `write_run_ledger()` parses into `records` and C7 checks.
+`stamp_record(store, targets_read)` is called in a project's Quarto record. It prints a short human-readable block (run id from the `DCTOOLS_RUN_ID` environment variable, git SHA, `dctools` version) and embeds the same data, plus the SHA-256 of each stored object file it read, in a machine-readable HTML comment (`<!-- dctools-stamp {json} -->`) that `write_run_ledger()` parses into `records` and C7 checks. A stamp may name only reportable reports; what a record reads without stamping it is outside the audit. A stamp that is not valid JSON is kept as an empty stamp, which fails C7.
 
 ### 3.6 Human-readable output
 
@@ -151,6 +155,9 @@ Never written: error or warning messages (they can carry row-level values), obje
 - C1 requires a full 40-hex commit SHA; C3 fails when the ledger has no `outdated` record; C6 accepts only completed, skipped or built target statuses; C7 requires at least one stamped object and a non-missing run id, commit and hashes. A check with nothing to evaluate is NOT EVALUATED.
 - The ledger whitelists stamp fields (`run_id`, `sha`, `dctools_version`, `objects`). The audit page shows masked values in backticks and prints git commands and links only for a valid 40-hex SHA; the verify block includes a `git show <sha>:<file> | sed -n` command for C1.
 - `run_targets_safe(ledger = )` exit precedence: 2 > 1 > 3 > 0.
+- C1 accepts a function span when the code at the commit has a function expression (at any nesting level) spanning exactly those lines, so counts recorded in anonymous functions (`lapply(x, function(g) ...)`) and nested helpers pass. A value's `function` is the name the function is defined under in the source, or `(anonymous function)`; the provenance page shows it so.
+- A statement is taken as a value's provenance only if its source contains a call to the recording function; a value captured in a closure and forced elsewhere gets `NA` lines. The same id and value recorded from two different sites is registered under a suffixed id, so each keeps its provenance.
+- Count ids match `^~?[A-Za-z][A-Za-z0-9_.]*$`. `audit_run()` refuses a ledger whose run id is not `YYYYMMDD-HHMMSS` before writing anything. The provenance page always recomputes masking, ignoring any resolver stored in the loaded report.
 
 ## 6. Out of scope
 

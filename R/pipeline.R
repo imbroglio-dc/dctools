@@ -735,10 +735,11 @@ read_debug_status <- function(debug_dir, target_name) {
 #'   (see [write_run_ledger()] and [audit_run()]): `dir` (default
 #'   `"docs/runs"`), `reportable`, `links`, `extra_inputs`, `documents`,
 #'   `records`. With a ledger, a working tree with uncommitted or untracked
-#'   files outside `dir` is refused before the pipeline runs (runner failure
-#'   `dctools_runner_dirty_tree_error`); after the run the ledger is written
-#'   and audited, and stdout gains an `== audit ==` block with one line per
-#'   check, the verdict and the ledger's path.
+#'   files other than `dir` and the declared `records` is refused before the
+#'   pipeline runs (runner failure `dctools_runner_dirty_tree_error`), so the
+#'   targets store and debug output must be git-ignored; after the run the
+#'   ledger is written and audited, and stdout gains an `== audit ==` block
+#'   with one line per check, the verdict and the ledger's path.
 #' @return The exit status, invisibly: `0L` when every target succeeded (and,
 #'   with a ledger, the audit passed), `1L` when a target errored, `2L` when
 #'   the runner itself failed, `3L` when no target errored but the audit's

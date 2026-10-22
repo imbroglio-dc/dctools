@@ -549,17 +549,28 @@
 #' * **C5 Inputs**: every input and document still has its recorded SHA-256.
 #' * **C6 Decisions**: every decision links to a target that was built.
 #' * **C7 Records**: every rendered record is unchanged and stamped with this
-#'   run, its commit and the objects it read.
-#' * **C8 Provenance**: every reported value has complete provenance, and no
-#'   number was printed without it.
+#'   run and its commit, and every object its stamp names is an available
+#'   reportable report at the ledger's hash.
+#' * **C8 Provenance**: every reportable target is available, every reported
+#'   value has complete provenance, and no number was printed without it.
 #' * **C9 Engine**: dctools was installed from a pushed commit, and the
 #'   audit ran under the same dctools as the run.
+#'
+#' **Not covered.** Record content that does not come from a dctools report
+#' (anything a record reads or computes without stamping it) is not checked.
+#' Numbers enter a report through [record_count()] and its siblings; project
+#' code that edits a report's internal fields directly is not detected, which
+#' is a matter for code review (the provenance page points reviewers at the
+#' code). C9 is computed by the installed dctools it vouches for; the
+#' `RemoteSha` command in the verify-by-hand block is the independent check.
 #'
 #' A check with nothing to evaluate is `"NOT EVALUATED"`, never `"PASS"`.
 #' Before any check, a reportable target that is not a masked dctools report
 #' stops the audit (class `dctools_audit_unsafe_error`) and nothing is
-#' written. The audit is meant to run immediately after the run, against
-#' the store that run produced. Writes `<run_id>.md` (the verdict page) and
+#' written; so does a ledger whose run id is not `YYYYMMDD-HHMMSS` (class
+#' `dctools_audit_run_id_error`). The audit is meant to run immediately
+#' after the run, against the store that run produced. Writes `<run_id>.md`
+#' (the verdict page) and
 #' `<run_id>.provenance.md` (each reported value with the code that computed
 #' it) next to the ledger.
 #'

@@ -29,7 +29,9 @@
 #' them and output, and prints them with small counts hidden (see
 #' [render_report()]). Counts enter only through [record_count()],
 #' [record_unprinted_count()], [add_count_table()] and [add_tabulation()],
-#' which also record the source lines that computed each one.
+#' which also record the source lines that computed each one. Editing the
+#' report's internal fields directly (its counts, provenance or output) is
+#' not detected by the audit; it is a matter for code review.
 #'
 #' @param hide_small_counts Hide counts of 1-4 and anything that would reveal
 #'   them (`TRUE`, the default), or print every count exactly (`FALSE`, for
@@ -152,7 +154,8 @@ create_report <- function(hide_small_counts = TRUE, error_sink = NULL) {
 #' [add_data_frame()]; printing replaces it with the number, `"<5"` or
 #' `"<suppr.>"`. The source lines of this call and the function it sits in
 #' are recorded with the count (they exist only for code sourced with
-#' `keep.source = TRUE`).
+#' `keep.source = TRUE`). This is how numbers enter a report; direct edits
+#' of the report's internal fields bypass it and are not detected.
 #'
 #' @param report A report from [create_report()].
 #' @param id The count's id: a letter, then letters, digits, `_` or `.`

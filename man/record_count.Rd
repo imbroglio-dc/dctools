@@ -28,7 +28,8 @@ placeholder (\code{"{{id}}"}) to put in text passed to \code{\link[=add_line]{ad
 \code{\link[=add_data_frame]{add_data_frame()}}; printing replaces it with the number, \code{"<5"} or
 \code{"<suppr.>"}. The source lines of this call and the function it sits in
 are recorded with the count (they exist only for code sourced with
-\code{keep.source = TRUE}).
+\code{keep.source = TRUE}). This is how numbers enter a report; direct edits
+of the report's internal fields bypass it and are not detected.
 }
 \examples{
 r <- create_report()

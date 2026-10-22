@@ -70,6 +70,11 @@ file is written. A reportable target that was not built, or stored
 
 Run it from the project root: relative paths in \code{extra_inputs},
 \code{documents} and \code{records} are read from the working directory.
+
+The clean-tree check ignores the ledger directory and the declared
+\code{records} (a run rewrites them; check C7 vouches for records). Anything
+else the run writes, notably the targets store and debug output, must be
+git-ignored, or the tree is recorded as not clean and C1 fails.
 }
 \examples{
 \dontrun{

@@ -161,3 +161,67 @@ test_that(".web_url strips credentials", {
     "https://github.com/o/r"
   )
 })
+
+test_that("the provenance page recomputes masking, ignoring a stored resolver", {
+  r <- create_report()
+  record_count(r, "n", 3)
+  # A stale or tampered resolver in the stored object prints the exact value.
+  r$resolver <- function(text) gsub("\\{\\{n\\}\\}", "3", text)
+  r$decision <- list()
+  ledger <- list(
+    run = list(run_id = "20260101-000000"),
+    code = list(sha = NA),
+    provenance = list(list(
+      report = "rep",
+      id = "n",
+      file = "R/a.R",
+      line_start = 1L,
+      line_end = 1L,
+      code = "x",
+      function_name = "f"
+    ))
+  )
+  pm <- .render_provenance_md(ledger, list(rep = r))
+  expect_true(any(grepl("`rep` / `n` = `<5`", pm, fixed = TRUE)))
+  expect_false(any(grepl("= `3`", pm, fixed = TRUE)))
+})
+
+test_that("an anonymous function is shown as such on the provenance page", {
+  ledger <- list(
+    run = list(run_id = "20260101-000000"),
+    code = list(sha = NA),
+    provenance = list(list(
+      report = "rep",
+      id = "n",
+      file = "R/a.R",
+      line_start = 2L,
+      line_end = 2L,
+      code = "x",
+      function_name = "(anonymous function)",
+      function_line_start = 2L,
+      function_line_end = 2L
+    ))
+  )
+  r <- create_report()
+  record_count(r, "n", 30)
+  pm <- .render_provenance_md(ledger, list(rep = r))
+  expect_true("### (anonymous function) (lines 2-2)" %in% pm)
+})
+
+test_that("verify-by-hand commands use sh quoting on every platform", {
+  expect_identical(.sh_quote("a b"), "'a b'")
+  # sh quoting, never cmd's: a single quote goes inside double quotes.
+  expect_identical(.sh_quote("it's"), "\"it's\"")
+})
+
+test_that(".first_code_ref skips absolute paths, Windows ones included", {
+  prov <- list(
+    list(file = "C:/proj/R/a.R", line_start = 1L, line_end = 1L),
+    list(file = "/proj/R/a.R", line_start = 1L, line_end = 1L),
+    list(file = "R/a.R", line_start = 2L, line_end = 3L)
+  )
+  expect_identical(
+    .first_code_ref(prov),
+    list(file = "R/a.R", start = 2L, end = 3L)
+  )
+})

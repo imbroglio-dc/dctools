@@ -346,6 +346,11 @@
 #' Run it from the project root: relative paths in `extra_inputs`,
 #' `documents` and `records` are read from the working directory.
 #'
+#' The clean-tree check ignores the ledger directory and the declared
+#' `records` (a run rewrites them; check C7 vouches for records). Anything
+#' else the run writes, notably the targets store and debug output, must be
+#' git-ignored, or the tree is recorded as not clean and C1 fails.
+#'
 #' @param path Directory the ledger is written to (e.g. `"docs/runs"`);
 #'   ignored by the clean-tree check.
 #' @param run_id The run id (`YYYYMMDD-HHMMSS`).
