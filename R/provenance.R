@@ -116,6 +116,20 @@
     srcref[[3]] <= fn_srcref[[3]]
 }
 
+# Whether the source lines of `srcref` contain a call to the function `name`
+# (`name(`, `pkg::name(`); FALSE when either is unknown.
+.mentions_call <- function(srcref, name) {
+  code <- .srcref_lines(srcref)
+  if (is.na(name) || is.na(code)) {
+    return(FALSE)
+  }
+  grepl(
+    paste0("(^|[^A-Za-z0-9._])\\Q", name, "\\E\\s*\\("),
+    code,
+    perl = TRUE
+  )
+}
+
 # Provenance of `call` (a call as returned by sys.call(), which carries the
 # "srcref" of the statement it was made from) made from the frame whose
 # environment is `env` (the caller's parent.frame()).
@@ -142,6 +156,12 @@
   }
   if (is.null(srcref) && !is.na(n) && n > 0L) {
     srcref <- .enclosing_srcref(n)
+  }
+  # A promise forced later (a value captured in a closure and read by
+  # another statement) would point at the forcing statement: the statement
+  # must at least contain a call to the recording function.
+  if (!is.null(srcref) && !.mentions_call(srcref, .call_name(call))) {
+    srcref <- NULL
   }
   if (!is.null(srcref)) {
     out$file <- .srcref_path(srcref)

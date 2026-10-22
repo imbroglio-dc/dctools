@@ -11,8 +11,8 @@ record_count(report, id, expr, protect = FALSE)
 
 \item{id}{The count's id: a letter, then letters, digits, \verb{_} or \code{.}
 (anything else is an error of class \code{dctools_report_id_error}). If \code{id}
-is already registered with a different value, \code{"id_2"}, \code{"id_3"}, ...
-is used instead.}
+is already registered with a different value, or from another line of
+code, \code{"id_2"}, \code{"id_3"}, ... is used instead.}
 
 \item{expr}{The expression computing the count.}
 

@@ -197,3 +197,37 @@ test_that("a count in an anonymous function is named so, a nested helper by its 
   # Called as lapply's FUN, but defined as helper().
   expect_identical(p$h$function_name, "helper")
 })
+
+test_that("a count forced later through a closure gets NA lines, not the forcing line", {
+  env <- source_user_code(c(
+    "build <- function(d) {",
+    "  r <- dctools::create_report()",
+    "  keep <- function(val) function() val",
+    "  getter <- keep(dctools::record_count(r, 'n', length(d)))",
+    "  dctools::add_line(r, 'n = ', getter())",
+    "  r",
+    "}"
+  ))
+  p <- env$build(1:7)$provenance$n
+  expect_identical(p$line_start, NA_integer_)
+  expect_identical(p$line_end, NA_integer_)
+  expect_identical(p$code, NA_character_)
+})
+
+test_that("the same id and value recorded at two sites keeps both provenances", {
+  env <- source_user_code(c(
+    "build <- function(d) {",
+    "  r <- dctools::create_report()",
+    "  dctools::add_line(r, 'n = ', dctools::record_count(r, 'n', length(d)))",
+    "  dctools::record_count(r, 'n', 5)",
+    "  for (i in 1:2) dctools::record_count(r, 'm', 3)",
+    "  r",
+    "}"
+  ))
+  r <- env$build(1:5)
+  expect_identical(r$provenance$n$line_start, 3L)
+  expect_identical(r$provenance$n_2$line_start, 4L)
+  expect_identical(unname(r$counts[c("n", "n_2")]), c(5, 5))
+  # The same site recording the same value again reuses its id.
+  expect_false("m_2" %in% names(r$counts))
+})

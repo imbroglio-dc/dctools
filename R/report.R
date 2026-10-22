@@ -106,17 +106,34 @@ create_report <- function(hide_small_counts = TRUE, error_sink = NULL) {
   invisible(id)
 }
 
-# Registering an existing id with a different value creates a new id
-# ("id_2", ...) instead of overwriting. Returns the id used.
-.register_count <- function(report, id, value, protect = FALSE) {
+# The fields that say where a value was recorded.
+.same_site <- function(a, b) {
+  fields <- c("file", "line_start", "line_end", "function_name")
+  identical(a[fields], b[fields])
+}
+
+# Registering an existing id with a different value, or from a different site
+# (`provenance`), creates a new id ("id_2", ...) instead of overwriting.
+# Returns the id used.
+.register_count <- function(
+  report,
+  id,
+  value,
+  protect = FALSE,
+  provenance = NULL
+) {
   .stop_if_prepared(report)
   value <- as.numeric(value)
   base_id <- id
   suffix <- 1L
+  other_site <- function(id) {
+    known <- report$provenance[[id]]
+    !is.null(provenance) && !is.null(known) && !.same_site(known, provenance)
+  }
   while (
     id %in%
       names(report$counts) &&
-      !isTRUE(all.equal(report$counts[[id]], value))
+      (!isTRUE(all.equal(report$counts[[id]], value)) || other_site(id))
   ) {
     suffix <- suffix + 1L
     id <- paste0(base_id, "_", suffix)
@@ -140,8 +157,8 @@ create_report <- function(hide_small_counts = TRUE, error_sink = NULL) {
 #' @param report A report from [create_report()].
 #' @param id The count's id: a letter, then letters, digits, `_` or `.`
 #'   (anything else is an error of class `dctools_report_id_error`). If `id`
-#'   is already registered with a different value, `"id_2"`, `"id_3"`, ...
-#'   is used instead.
+#'   is already registered with a different value, or from another line of
+#'   code, `"id_2"`, `"id_3"`, ... is used instead.
 #' @param expr The expression computing the count.
 #' @param protect Keep this count visible if at all possible (results the
 #'   reader must see, such as cohort sizes).
@@ -156,8 +173,9 @@ record_count <- function(report, id, expr, protect = FALSE) {
   call <- sys.call()
   env <- parent.frame()
   .check_count_id(id)
-  id <- .register_count(report, id, expr, protect)
-  .store_provenance(report, id, .capture_provenance(call, env))
+  provenance <- .capture_provenance(call, env)
+  id <- .register_count(report, id, expr, protect, provenance)
+  .store_provenance(report, id, provenance)
   paste0("{{", id, "}}")
 }
 
@@ -346,7 +364,13 @@ add_data_frame <- function(report, data) {
   cell_ids <- array(paste0(id, ".", seq_along(counts)), dim = dimensions)
   cell_placeholders <- cell_ids
   for (i in seq_along(counts)) {
-    cell_ids[i] <- .register_count(report, cell_ids[i], counts[i], protect)
+    cell_ids[i] <- .register_count(
+      report,
+      cell_ids[i],
+      counts[i],
+      protect,
+      provenance
+    )
     cell_placeholders[i] <- paste0("{{", cell_ids[i], "}}")
     if (!is.null(provenance)) {
       .store_provenance(report, cell_ids[i], provenance)
