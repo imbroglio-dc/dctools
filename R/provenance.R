@@ -160,10 +160,48 @@
       if (!is.na(out$function_file)) {
         out$function_line_start <- as.integer(fn_srcref[[1]])
         out$function_line_end <- as.integer(fn_srcref[[3]])
+        out$function_name <- .definition_name(fn_srcref, out$function_name)
       }
     }
   }
   out
+}
+
+# The function definitions of the source files seen so far, kept with the
+# lines they were parsed from (a file sourced again after an edit is
+# re-parsed).
+.defs_cache <- new.env(parent = emptyenv())
+
+# The name a function is defined under in its source (`helper <- function`),
+# whatever it was called as (lapply() calls it FUN); "(anonymous function)"
+# when the source shows no name; `fallback` when the source cannot be read.
+.definition_name <- function(fn_srcref, fallback) {
+  srcfile <- attr(fn_srcref, "srcfile")
+  path <- .srcref_path(fn_srcref)
+  lines <- tryCatch(
+    base::getSrcLines(srcfile, 1L, .Machine$integer.max),
+    error = function(e) character(0)
+  )
+  if (is.na(path) || !length(lines)) {
+    return(fallback)
+  }
+  hit <- .defs_cache[[path]]
+  if (is.null(hit) || !identical(hit$lines, lines)) {
+    hit <- list(lines = lines, defs = .function_defs(lines))
+    assign(path, hit, envir = .defs_cache)
+  }
+  defs <- hit$defs
+  row <- defs[
+    defs$line_start == fn_srcref[[1]] &
+      defs$col_start == fn_srcref[[5]] &
+      defs$line_end == fn_srcref[[3]],
+    ,
+    drop = FALSE
+  ]
+  if (nrow(row) != 1L) {
+    return(fallback)
+  }
+  if (is.na(row$name[[1]])) "(anonymous function)" else row$name[[1]]
 }
 
 # Attach a provenance record to a registered count id.

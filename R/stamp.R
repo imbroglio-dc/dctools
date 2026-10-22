@@ -73,9 +73,13 @@ stamp_record <- function(
     text,
     gregexpr("<!-- dctools-stamp \\{.*?\\} -->", text, perl = TRUE)
   )[[1]]
-  lapply(
-    sub("^<!-- dctools-stamp (\\{.*\\}) -->$", "\\1", found),
-    jsonlite::fromJSON,
-    simplifyVector = FALSE
-  )
+  # A stamp that is not valid JSON becomes an empty stamp, so it still counts
+  # and fails C7 (no run id, commit or objects) instead of crashing.
+  lapply(sub("^<!-- dctools-stamp (\\{.*\\}) -->$", "\\1", found), function(x) {
+    parsed <- tryCatch(
+      jsonlite::fromJSON(x, simplifyVector = FALSE),
+      error = function(e) list()
+    )
+    if (is.list(parsed)) parsed else list()
+  })
 }

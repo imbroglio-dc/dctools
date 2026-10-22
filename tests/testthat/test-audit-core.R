@@ -249,3 +249,74 @@ test_that("C3 fails when the ledger lacks or records outdated targets", {
   expect_identical(status_of(r2, "C3"), "FAIL")
   expect_match(detail_of(r2, "C3"), "evidence", all = FALSE)
 })
+
+# Counts recorded inside an anonymous function (lapply) or a nested helper,
+# checked against their own source the way C1 checks them against git.
+nested_provenance <- function() {
+  local_mocked_bindings(
+    .current_target = function() "rep",
+    .env = parent.frame()
+  )
+  env <- source_user_code(
+    c(
+      "build <- function(d) {",
+      "  r <- dctools::create_report()",
+      "  lapply(c('a', 'b'), function(g) dctools::record_count(r, paste0('n_', g), sum(d == g)))",
+      "  add <- function(id, v) dctools::record_count(r, id, v)",
+      "  add('n', length(d))",
+      "  r",
+      "}"
+    ),
+    .local_envir = parent.frame()
+  )
+  r <- env$build(c("a", "b", "b", "a", "a"))
+  dir <- dirname(r$provenance[[1]]$file)
+  list(
+    provenance = lapply(r$provenance, function(p) {
+      p$file <- basename(p$file)
+      p$function_file <- basename(p$function_file)
+      p$report <- "rep"
+      p
+    }),
+    show = function(f) readLines(file.path(dir, f))
+  )
+}
+
+test_that("C1 accepts counts recorded in anonymous and nested functions", {
+  x <- nested_provenance()
+  expect_setequal(names(x$provenance), c("n_a", "n_b", "n"))
+  for (p in x$provenance) {
+    it <- .check_snippet(p, show = x$show)
+    expect_true(it$ok, info = paste(p$id, it$detail))
+  }
+  expect_identical(
+    c(x$provenance$n$function_line_start, x$provenance$n$function_line_end),
+    c(4L, 4L)
+  )
+})
+
+test_that("C1 still fails a function span that matches no function at the commit", {
+  x <- nested_provenance()
+  for (id in c("n_a", "n")) {
+    p <- x$provenance[[id]]
+    p$function_line_end <- 5L
+    it <- .check_snippet(p, show = x$show)
+    expect_false(it$ok)
+    expect_match(it$detail, "is not defined at user.R:")
+  }
+})
+
+test_that(".function_defs lists every function expression, named or not", {
+  defs <- .function_defs(c(
+    "h = function() 2",
+    "build <- function() {",
+    "  inner <- function() 1",
+    "  lapply(1, FUN = function(z) z)",
+    "  \\(x) x",
+    "}"
+  ))
+  expect_identical(defs$line_start, c(1L, 2L, 3L, 4L, 5L))
+  expect_identical(defs$line_end, c(1L, 6L, 3L, 4L, 5L))
+  expect_identical(defs$name, c("h", "build", "inner", NA, NA))
+  expect_identical(nrow(.function_defs("not ( valid")), 0L)
+})

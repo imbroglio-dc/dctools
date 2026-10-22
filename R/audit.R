@@ -113,13 +113,19 @@
   if (is.null(fn_lines)) {
     return(.item(label, FALSE, "the enclosing function has no tracked source"))
   }
+  fn_start <- .int_or_na(p$function_line_start)
+  fn_end <- .int_or_na(p$function_line_end)
+  # A named top-level definition, or any function expression (anonymous or
+  # nested) spanning exactly the recorded lines.
   spans <- .spans_in_lines(fn_lines, fn_file)
-  found <- spans$name == .as_chr(p$function_name) &
-    spans$line_start == .int_or_na(p$function_line_start) &
-    spans$line_end == .int_or_na(p$function_line_end)
+  named <- spans$name == .as_chr(p$function_name) &
+    spans$line_start == fn_start &
+    spans$line_end == fn_end
+  defs <- .function_defs(fn_lines)
+  any_fn <- defs$line_start == fn_start & defs$line_end == fn_end
   .item(
     label,
-    any(found %in% TRUE),
+    any(named %in% TRUE) || any(any_fn %in% TRUE),
     sprintf(
       "%s() is not defined at %s:%s-%s at the run's commit",
       .as_chr(p$function_name),
@@ -324,14 +330,18 @@
 
 # C7 Records --------------------------------------------------------------------
 
-.check_records <- function(ledger, store) {
+# Every object a record's stamp names must be a reportable report that the
+# audit loaded, at the hash the ledger records for it. What a record reads
+# without stamping it is not covered.
+.check_records <- function(ledger, store, reports) {
   if (!length(ledger$records)) {
     return(.check_result("C7", .items(), "no records in the ledger"))
   }
   objects <- stats::setNames(
-    vapply(ledger$targets, function(t) .as_chr(t$object_sha256), ""),
-    vapply(ledger$targets, function(t) .as_chr(t$name), "")
+    vapply(ledger$reportable, function(r) .as_chr(r$object_sha256), ""),
+    vapply(ledger$reportable, function(r) .as_chr(r$name), "")
   )
+  objects <- objects[names(objects) %in% names(reports)]
   items <- lapply(ledger$records, function(r) {
     path <- .as_chr(r$path)
     if (!identical(.sha256_file(path), .as_chr(r$sha256))) {
@@ -359,13 +369,15 @@
       } else if (!identical(sha, .as_chr(ledger$code$sha))) {
         "stamped with another commit"
       },
-      if (!length(s$objects)) {
+      if (
+        !length(s$objects) || !is.list(s$objects) || is.null(names(s$objects))
+      ) {
         "the stamp names no objects"
       },
       unlist(lapply(names(s$objects), function(nm) {
         recorded <- .as_chr(s$objects[[nm]])
         if (!nm %in% names(objects)) {
-          paste(nm, "is not in the ledger")
+          paste(nm, "is not a reportable report")
         } else {
           in_store <- .sha256_file(.object_path(store, nm))
           if (is.na(recorded) || is.na(objects[[nm]]) || is.na(in_store)) {
@@ -432,14 +444,19 @@
 }
 
 .check_provenance <- function(ledger, reports) {
-  if (!length(reports)) {
+  # A reportable target with no loaded report (mistyped, never built, or
+  # errored) would otherwise pass silently: it is a failure, not a skip.
+  listed <- vapply(ledger$reportable, function(r) .as_chr(r$name), "")
+  items <- lapply(setdiff(listed, names(reports)), function(nm) {
+    .item(nm, FALSE, "reportable target not available")
+  })
+  if (!length(reports) && !length(items)) {
     return(.check_result("C8", .items(), "no reportable report was available"))
   }
   in_ledger <- list()
   for (p in ledger$provenance) {
     in_ledger[[paste0(.as_chr(p$report), ":", .as_chr(p$id))]] <- p
   }
-  items <- list()
   for (nm in names(reports)) {
     r <- reports[[nm]]
     for (id in c(names(r$counts), names(r$unprinted_counts))) {
@@ -569,6 +586,17 @@ audit_run <- function(ledger_path, store = NULL, script = NULL, repo = ".") {
     script <- targets::tar_config_get("script")
   }
   ledger <- jsonlite::read_json(ledger_path, simplifyVector = FALSE)
+  # The run id names the files written next to the ledger.
+  run_id <- .as_chr(ledger$run$run_id)
+  if (is.na(run_id) || !grepl(.run_id_pattern, run_id)) {
+    stop(structure(
+      class = c("dctools_audit_run_id_error", "error", "condition"),
+      list(
+        message = "the ledger's run id is not of the form YYYYMMDD-HHMMSS",
+        call = NULL
+      )
+    ))
+  }
   reportable <- vapply(ledger$reportable, function(r) .as_chr(r$name), "")
   reports <- .load_reportable(store, reportable)
   result <- .bind_results(list(
@@ -578,7 +606,7 @@ audit_run <- function(ledger_path, store = NULL, script = NULL, repo = ".") {
     .check_complete(store),
     .check_inputs(ledger),
     .check_decisions(ledger),
-    .check_records(ledger, store),
+    .check_records(ledger, store, reports),
     .check_provenance(ledger, reports),
     .check_engine(ledger)
   ))

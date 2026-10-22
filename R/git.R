@@ -51,11 +51,19 @@
   if (length(url)) .strip_credentials(url[[1]]) else NA_character_
 }
 
-.git_dirty_files <- function(repo, exclude) {
+# Uncommitted or untracked files, outside the directory `exclude` and other
+# than the repo-relative files `exclude_files` (the ledger directory and the
+# declared records, which a run rewrites and C7 vouches for).
+.git_dirty_files <- function(repo, exclude, exclude_files = character(0)) {
   status <- .git(repo, c("status", "--porcelain", "--untracked-files=all"))
   paths <- sub('^"(.*)"$', "\\1", sub("^.* -> ", "", substring(status, 4L)))
   prefix <- paste0(sub("/+$", "", exclude), "/")
-  paths[!startsWith(paths, prefix)]
+  paths[!startsWith(paths, prefix) & !paths %in% exclude_files]
+}
+
+# The declared record files as repo-relative paths.
+.records_in_repo <- function(records, repo = ".") {
+  vapply(records, .ledger_dir_in_repo, "", repo = repo, USE.NAMES = FALSE)
 }
 
 .is_absolute <- function(path) grepl("^(/|[A-Za-z]:[/\\\\])", path)

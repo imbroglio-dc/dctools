@@ -25,13 +25,17 @@ test_that("the untouched fixture passes all nine checks", {
   expect_identical(attr(result, "verdict"), "PASS")
 })
 
-test_that("C4 fails on an errored target; the unavailable report is skipped, not a stop", {
+test_that("C4 fails on an errored target; the unavailable report fails C8, not a stop", {
   skip_ledger_fixture()
   local_engine()
   result <- audit_copy(copy_fixture(fail = TRUE))
   expect_identical(status_of(result, "C4"), "FAIL")
   expect_match(detail_of(result, "C4"), "values: errored", all = FALSE)
-  expect_identical(status_of(result, "C8"), "NOT EVALUATED")
+  expect_identical(status_of(result, "C8"), "FAIL")
+  expect_identical(
+    detail_of(result, "C8"),
+    "evidence: reportable target not available"
+  )
   expect_identical(attr(result, "verdict"), "FAIL")
 })
 
@@ -213,6 +217,8 @@ test_that("C7 fails a stamp with no run id, no commit, or a null object hash", {
   expect_identical(status_of(result, "C7"), "FAIL")
   expect_match(detail_of(result, "C7"), "the stamp has no run id", all = FALSE)
 
+  # A ledger with no run id stops audit_run() before any check, so C7 is
+  # called directly: a missing run id on both sides is not a match.
   proj2 <- copy_fixture()
   edit_ledger(fixture_ledger_path(proj2), function(l) {
     l$run$run_id <- NULL
@@ -222,11 +228,18 @@ test_that("C7 fails a stamp with no run id, no commit, or a null object hash", {
     s$run_id <- NULL
     s
   })
-  expect_match(
-    detail_of(audit_copy(proj2), "C7"),
-    "the stamp has no run id",
-    all = FALSE
+  ledger2 <- jsonlite::read_json(
+    fixture_ledger_path(proj2),
+    simplifyVector = FALSE
   )
+  c7 <- withr::with_dir(proj2, {
+    .check_records(
+      ledger2,
+      "_targets",
+      .load_reportable("_targets", "evidence")
+    )
+  })
+  expect_match(c7$detail[[1]], "the stamp has no run id", all = FALSE)
 
   proj3 <- copy_fixture()
   restamp_record(proj3, function(s) {
@@ -241,8 +254,7 @@ test_that("C7 fails a stamp with no run id, no commit, or a null object hash", {
 
   proj4 <- copy_fixture()
   restamp_record(proj4, function(s) {
-    s$objects[[1]] <- NULL
-    s$objects <- c(s$objects, list(values = NULL))
+    s$objects <- list(evidence = NULL)
     s
   })
   result4 <- audit_copy(proj4)
@@ -275,4 +287,93 @@ test_that("C6 fails a linked target whose status is missing or not a built one",
       all = FALSE
     )
   }
+})
+
+test_that("C8 fails for a reportable target that was never built or is mistyped", {
+  skip_ledger_fixture()
+  local_engine()
+  proj <- copy_fixture()
+  edit_ledger(fixture_ledger_path(proj), function(l) {
+    l$reportable[[2]] <- list(
+      name = "evidense",
+      object_sha256 = NULL,
+      available = FALSE
+    )
+    l
+  })
+  result <- audit_copy(proj)
+  expect_identical(status_of(result, "C8"), "FAIL")
+  expect_true(
+    "evidense: reportable target not available" %in% detail_of(result, "C8")
+  )
+})
+
+test_that("C7 fails a stamp naming an object that is not a reportable report", {
+  skip_ledger_fixture()
+  local_engine()
+  proj <- copy_fixture()
+  # The record also reads `values`, at its correct hash, which no report
+  # vouches for.
+  values_sha <- .sha256_file(file.path(proj, "_targets", "objects", "values"))
+  restamp_record(proj, function(s) {
+    s$objects$values <- values_sha
+    s
+  })
+  result <- audit_copy(proj)
+  expect_identical(status_of(result, "C7"), "FAIL")
+  expect_match(
+    detail_of(result, "C7"),
+    "values is not a reportable report",
+    all = FALSE
+  )
+
+  proj2 <- copy_fixture()
+  restamp_record(proj2, function(s) {
+    s$objects <- "not a named list"
+    s
+  })
+  expect_match(
+    detail_of(audit_copy(proj2), "C7"),
+    "the stamp names no objects",
+    all = FALSE
+  )
+})
+
+test_that("C7 fails, not crashes, on a record whose stamp is not valid JSON", {
+  skip_ledger_fixture()
+  local_engine()
+  proj <- copy_fixture()
+  f <- file.path(proj, "output", "record.html")
+  writeLines(
+    sub(
+      "<!-- dctools-stamp \\{.*\\} -->",
+      "<!-- dctools-stamp {not json} -->",
+      readLines(f)
+    ),
+    f
+  )
+  sha <- .sha256_file(f)
+  edit_ledger(fixture_ledger_path(proj), function(l) {
+    l$records[[1]]$sha256 <- sha
+    l
+  })
+  result <- audit_copy(proj)
+  expect_identical(status_of(result, "C7"), "FAIL")
+  expect_match(detail_of(result, "C7"), "the stamp has no run id", all = FALSE)
+})
+
+test_that("audit_run refuses a ledger whose run id is not YYYYMMDD-HHMMSS", {
+  skip_ledger_fixture()
+  local_engine()
+  proj <- copy_fixture()
+  edit_ledger(fixture_ledger_path(proj), function(l) {
+    l$run$run_id <- "../../evil"
+    l
+  })
+  expect_error(audit_copy(proj), class = "dctools_audit_run_id_error")
+  expect_identical(
+    list.files(file.path(proj, "docs", "runs"), recursive = TRUE),
+    paste0(fixture_run_id, ".json")
+  )
+  expect_false(file.exists(file.path(proj, "evil.md")))
 })

@@ -845,7 +845,11 @@ run_targets_safe <- function(
   }
   if (!is.null(ledger)) {
     ledger <- .check_ledger_config(ledger)
-    dirty <- .git_dirty_files(".", .ledger_dir_in_repo(ledger$dir, "."))
+    dirty <- .git_dirty_files(
+      ".",
+      .ledger_dir_in_repo(ledger$dir, "."),
+      .records_in_repo(ledger$records, ".")
+    )
     if (length(dirty)) {
       log_line(
         "uncommitted or untracked files: ",

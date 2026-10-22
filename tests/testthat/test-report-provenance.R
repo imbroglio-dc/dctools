@@ -174,3 +174,26 @@ test_that(".enclosing_srcref selects the statement made from the caller's own fr
   )
   expect_null(bare$caller2()[[1]])
 })
+
+test_that("a count in an anonymous function is named so, a nested helper by its name", {
+  env <- source_user_code(c(
+    "helper <- function(r, v) dctools::record_count(r, 'h', v)",
+    "build <- function(d) {",
+    "  r <- dctools::create_report()",
+    "  lapply(c('a', 'b'), function(g) dctools::record_count(r, paste0('n_', g), sum(d == g)))",
+    "  add <- function(id, v) dctools::record_count(r, id, v)",
+    "  add('n', length(d))",
+    "  lapply(list(r), helper, v = 9)",
+    "  r",
+    "}"
+  ))
+  p <- env$build(c("a", "b", "b"))$provenance
+  expect_identical(p$n_a$function_name, "(anonymous function)")
+  expect_identical(
+    c(p$n_a$function_line_start, p$n_a$function_line_end),
+    c(4L, 4L)
+  )
+  expect_identical(p$n$function_name, "add")
+  # Called as lapply's FUN, but defined as helper().
+  expect_identical(p$h$function_name, "helper")
+})

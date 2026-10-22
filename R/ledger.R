@@ -113,6 +113,63 @@
   )
 }
 
+# Every function expression in a file's lines, at any nesting level: its line
+# span, the column of its start, and the name it is assigned to (`name <-
+# function`, `name = function`), or NA for an anonymous function (an argument
+# of lapply(), say). A closure's srcref spans exactly its function
+# expression, so this is what a recorded function span is checked against.
+.function_defs <- function(lines) {
+  empty <- data.frame(
+    name = character(0),
+    line_start = integer(0),
+    col_start = integer(0),
+    line_end = integer(0),
+    stringsAsFactors = FALSE
+  )
+  exprs <- tryCatch(
+    parse(text = lines, keep.source = TRUE),
+    error = function(e) NULL
+  )
+  pd <- if (is.null(exprs)) NULL else utils::getParseData(exprs)
+  if (is.null(pd) || !nrow(pd)) {
+    return(empty)
+  }
+  keyword <- pd[pd$token %in% c("FUNCTION", "'\\\\'"), , drop = FALSE]
+  if (!nrow(keyword)) {
+    return(empty)
+  }
+  fn <- pd[match(keyword$parent, pd$id), , drop = FALSE]
+  name <- vapply(
+    seq_len(nrow(fn)),
+    function(i) {
+      kids <- pd[pd$parent == fn$parent[[i]], , drop = FALSE]
+      kids <- kids[order(kids$line1, kids$col1), , drop = FALSE]
+      if (
+        nrow(kids) != 3L ||
+          !kids$token[[2]] %in% c("LEFT_ASSIGN", "EQ_ASSIGN") ||
+          kids$id[[3]] != fn$id[[i]]
+      ) {
+        return(NA_character_)
+      }
+      target <- pd[pd$parent == kids$id[[1]], , drop = FALSE]
+      if (nrow(target) == 1L && target$token[[1]] == "SYMBOL") {
+        gsub("^`|`$", "", target$text[[1]])
+      } else {
+        NA_character_
+      }
+    },
+    ""
+  )
+  out <- data.frame(
+    name = name,
+    line_start = as.integer(fn$line1),
+    col_start = as.integer(fn$col1),
+    line_end = as.integer(fn$line2),
+    stringsAsFactors = FALSE
+  )
+  out[order(out$line_start, out$col_start), , drop = FALSE]
+}
+
 .function_spans <- function(repo) {
   files <- .git(repo, c("ls-files", "--", "*.R"))
   rows <- lapply(files, function(f) {
@@ -146,10 +203,10 @@
   )
 }
 
-.code_block <- function(repo, ledger_dir) {
+.code_block <- function(repo, ledger_dir, records = character(0)) {
   root <- .git_root(repo)
   exclude <- .ledger_dir_in_repo(ledger_dir, repo)
-  dirty <- .git_dirty_files(repo, exclude)
+  dirty <- .git_dirty_files(repo, exclude, .records_in_repo(records, repo))
   engine <- .dctools_engine()
   list(
     sha = .git_head(repo),
@@ -355,7 +412,7 @@ write_run_ledger <- function(
       requested = I(requested),
       exit_code = as.integer(exit_code)
     ),
-    code = .code_block(repo, path),
+    code = .code_block(repo, path, records),
     inputs = .input_block(meta, extra_inputs),
     documents = lapply(documents, function(p) {
       list(path = p, sha256 = .sha256_file(p))

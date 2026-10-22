@@ -100,3 +100,44 @@ test_that(".strip_credentials removes everything up to the last @ before the hos
   )
   expect_identical(.strip_credentials("https://tok@host/x"), "https://host/x")
 })
+
+test_that("a stamp that is not valid JSON is kept as an empty stamp, not a crash", {
+  skip_if_not_installed("jsonlite")
+  html <- withr::local_tempfile(fileext = ".html")
+  writeLines(
+    c(
+      "<!-- dctools-stamp {not json} -->",
+      "<!-- dctools-stamp {\"run_id\":\"20260101-000000\"} -->"
+    ),
+    html
+  )
+  parsed <- .parse_stamps(html)
+  expect_length(parsed, 2L)
+  expect_identical(parsed[[1]], list())
+  expect_identical(parsed[[2]]$run_id, "20260101-000000")
+  expect_identical(.whitelist_stamp(parsed[[1]])$run_id, NA_character_)
+})
+
+test_that("declared record files modified by the run do not make the tree dirty", {
+  repo <- local_git_repo()
+  dir.create(file.path(repo, "output"))
+  writeLines("old", file.path(repo, "output", "record.html"))
+  system2("git", c("-C", repo, "add", "-A"), stdout = TRUE)
+  system2("git", c("-C", repo, "commit", "-q", "-m", "rec"), stdout = TRUE)
+  # The run re-renders the tracked record (its stamp holds the run id).
+  writeLines("new", file.path(repo, "output", "record.html"))
+  expect_identical(
+    .git_dirty_files(repo, "docs/runs", "output/record.html"),
+    character(0)
+  )
+  withr::with_dir(repo, {
+    expect_true(
+      .code_block(".", "docs/runs", records = "output/record.html")$clean
+    )
+    expect_false(.code_block(".", "docs/runs")$clean)
+    writeLines("changed", "a.txt")
+    block <- .code_block(".", "docs/runs", records = "output/record.html")
+    expect_false(block$clean)
+    expect_identical(as.character(block$dirty_files), "a.txt")
+  })
+})
