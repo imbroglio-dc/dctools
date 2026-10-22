@@ -191,8 +191,22 @@
     in_file <- prov[files == f]
     fns <- vapply(in_file, function(p) .as_chr(p$function_name), "")
     fns[is.na(fns)] <- "(no function)"
-    for (fn in unique(fns)) {
-      first <- in_file[[which(fns == fn)[1]]]
+    # One heading per function definition: two anonymous functions (or two
+    # nested helpers with one name) in a file share a name, not a span.
+    groups <- vapply(
+      in_file,
+      function(p) {
+        paste(
+          .as_chr(p$function_name),
+          .as_chr(p$function_line_start),
+          .as_chr(p$function_line_end)
+        )
+      },
+      ""
+    )
+    for (g in unique(groups)) {
+      first <- in_file[[which(groups == g)[1]]]
+      fn <- fns[[which(groups == g)[1]]]
       out <- c(
         out,
         "",
@@ -207,7 +221,7 @@
           .as_chr(first$function_line_end)
         )
       )
-      for (p in in_file[fns == fn]) {
+      for (p in in_file[groups == g]) {
         start <- .int_or_na(p$line_start)
         end <- .int_or_na(p$line_end)
         link <- if (is.na(web) || f == "(no source file)" || is.na(start)) {

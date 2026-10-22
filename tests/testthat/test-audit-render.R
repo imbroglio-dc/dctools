@@ -208,6 +208,33 @@ test_that("an anonymous function is shown as such on the provenance page", {
   expect_true("### (anonymous function) (lines 2-2)" %in% pm)
 })
 
+test_that("distinct functions with one name get their own headings", {
+  entry <- function(id, line) {
+    list(
+      report = "rep",
+      id = id,
+      file = "R/a.R",
+      line_start = line,
+      line_end = line,
+      code = "x",
+      function_name = "(anonymous function)",
+      function_line_start = line,
+      function_line_end = line
+    )
+  }
+  ledger <- list(
+    run = list(run_id = "20260101-000000"),
+    code = list(sha = NA),
+    provenance = list(entry("n", 2L), entry("m", 5L))
+  )
+  r <- create_report()
+  record_count(r, "n", 30)
+  record_count(r, "m", 40)
+  pm <- .render_provenance_md(ledger, list(rep = r))
+  expect_true("### (anonymous function) (lines 2-2)" %in% pm)
+  expect_true("### (anonymous function) (lines 5-5)" %in% pm)
+})
+
 test_that("verify-by-hand commands use sh quoting on every platform", {
   expect_identical(.sh_quote("a b"), "'a b'")
   # sh quoting, never cmd's: a single quote goes inside double quotes.

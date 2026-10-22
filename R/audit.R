@@ -115,14 +115,18 @@
   }
   fn_start <- .int_or_na(p$function_line_start)
   fn_end <- .int_or_na(p$function_line_end)
-  # A named top-level definition, or any function expression (anonymous or
-  # nested) spanning exactly the recorded lines.
+  # A named top-level definition, or a function expression (anonymous or
+  # nested) spanning exactly the recorded lines under the recorded name.
+  fn_name <- .as_chr(p$function_name)
   spans <- .spans_in_lines(fn_lines, fn_file)
-  named <- spans$name == .as_chr(p$function_name) &
+  named <- spans$name == fn_name &
     spans$line_start == fn_start &
     spans$line_end == fn_end
   defs <- .function_defs(fn_lines)
-  any_fn <- defs$line_start == fn_start & defs$line_end == fn_end
+  def_name <- ifelse(is.na(defs$name), "(anonymous function)", defs$name)
+  any_fn <- def_name == fn_name &
+    defs$line_start == fn_start &
+    defs$line_end == fn_end
   .item(
     label,
     any(named %in% TRUE) || any(any_fn %in% TRUE),

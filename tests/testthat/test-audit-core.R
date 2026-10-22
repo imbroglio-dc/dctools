@@ -306,6 +306,16 @@ test_that("C1 still fails a function span that matches no function at the commit
   }
 })
 
+test_that("C1 fails a function span whose recorded name is not the definition's", {
+  x <- nested_provenance()
+  p <- x$provenance$n
+  p$function_name <- "build"
+  expect_false(.check_snippet(p, show = x$show)$ok)
+  p <- x$provenance$n_a
+  p$function_name <- "add"
+  expect_false(.check_snippet(p, show = x$show)$ok)
+})
+
 test_that(".function_defs lists every function expression, named or not", {
   defs <- .function_defs(c(
     "h = function() 2",
