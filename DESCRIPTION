@@ -35,8 +35,10 @@ Imports:
 Suggests:
     arrow,
     BiocManager,
+    callr,
     crew,
     dbplyr,
+    digest,
     gtsummary,
     janitor,
     jsonlite,

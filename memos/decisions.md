@@ -6,6 +6,12 @@ forks, dependency choices. Tooling friction goes in `workflow-feedback.md`, not 
 
 Add entries with `/log-decision`, or by hand using the template below.
 
+## 2026-10-20 - Run ledger: the audit, not the analyst, vouches for reported numbers
+**Decision:** Reported numbers enter reports only through `record_count()` and friends, which record their source lines; a PHI-free ledger indexes each run; `audit_run()` checks it with a fixed catalogue (C1-C9) that projects cannot shorten and that is tested to fail on corrupted input. The audit runs once, right after the run.
+**Why:** An agent-run analysis must be checkable without trusting the agent: its claims are citations into an audit file it cannot write, and the audit is reproducible from git, the store and the inputs.
+**Alternatives rejected:** a claims file written by the agent (it could fabricate both claim and ledger); verification as a target (a target cannot audit the run it belongs to); snapshots only (they show change, not which code produced it); replaying old runs (needs hash-stable objects; not needed when every run is audited immediately).
+**Links:** `memos/specs/2026-10-20-run-ledger-design.md`, `memos/plans/2026-10-20-run-ledger.md`.
+
 ## 2026-07-10 — `clean_colnames()` wraps `janitor::make_clean_names()`; janitor in Suggests
 
 **Decision:** Refactor `clean_colnames()` to delegate name cleaning to
