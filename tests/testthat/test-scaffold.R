@@ -24,6 +24,24 @@ test_that(".write_state_stack scaffolds memos/ only, no per-project feedback log
   expect_false(file.exists(file.path(root, "workflow-feedback.md")))
 })
 
+test_that("analysis .gitignore keeps a README in each private data zone", {
+  parent <- withr::local_tempdir()
+  dest <- create_project("zoneproj", path = parent, type = "analysis", git = FALSE)
+  gi <- readLines(file.path(dest, ".gitignore"))
+  expect_true("!data/raw/README.md" %in% gi)
+  expect_true("!data/processed/README.md" %in% gi)
+
+  skip_if(Sys.which("git") == "", "git not available")
+  system2("git", c("-C", dest, "init", "-q"))
+  writeLines("x", file.path(dest, "data", "raw", "README.md"))
+  writeLines("x", file.path(dest, "data", "raw", "secret.csv"))
+  ignored <- function(p) {
+    system2("git", c("-C", dest, "check-ignore", "-q", p)) == 0
+  }
+  expect_false(ignored("data/raw/README.md"))
+  expect_true(ignored("data/raw/secret.csv"))
+})
+
 test_that("create_project(type = 'analysis') scaffolds offline, no network clone", {
   parent <- withr::local_tempdir()
   # No network: a green run here proves the clone dependency is gone.
