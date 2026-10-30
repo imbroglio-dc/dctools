@@ -29,6 +29,10 @@
   reports (anything a record reads without stamping it) is not covered by
   the audit.
 * Initial package scaffold (renamed from the `helpers` script collection).
+* The scaffolded `.gitignore` now un-ignores `data/raw/README.md` and
+  `data/processed/README.md` (the private zones keep only a tracked README),
+  and the `.gitignore` comment and README layout line describe `data/metadata/`
+  as publishable, paper-shaped codebooks and dictionaries.
 * Project scaffolding: `create_project()` (analysis + package archetypes) and
   `make_file_dirs()`.
 * `create_project(type = "analysis")`'s README now pins the R version the
