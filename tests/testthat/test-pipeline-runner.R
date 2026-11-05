@@ -374,13 +374,16 @@ test_that("bad arguments through the shim exit 2 and print only the class", {
 test_that("the runner's output lies between its markers; startup noise and stray prints do not", {
   skip_end_to_end()
   proj <- make_toy_project()
-  writeLines("cat('startup EARLY-5\\n')", file.path(proj, ".Rprofile"))
+  # Stands in for R startup, renv or an .Rprofile: printed before the runner starts.
+  # (A real .Rprofile is not read by the child under R CMD check on every platform.)
+  shim <- file.path(proj, "code", "pipeline", "run_pipeline_safe.R")
+  writeLines(c("cat('startup EARLY-5\\n')", readLines(shim)), shim)
   res <- run_shim(proj)
   expect_identical(res$status, 0L, info = res$stdout)
   lines <- strsplit(res$stdout, "\n")[[1]]
   begin <- match("== dctools runner output schema 1 ==", lines)
   expect_false(is.na(begin), info = res$stdout)
-  # The .Rprofile line comes first: a wrapper drops everything before `begin`.
+  # The startup line comes first: a wrapper drops everything before `begin`.
   expect_identical(lines[seq_len(begin - 1L)], "startup EARLY-5")
   expect_identical(lines[length(lines)], "== end of runner output ==")
   inside <- lines[seq(begin, length(lines))]
