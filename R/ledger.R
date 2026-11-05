@@ -269,6 +269,157 @@
   c(from_targets, extra)
 }
 
+# Input stability -----------------------------------------------------------------
+#
+# Inputs are hashed before the pipeline runs and again when the ledger is
+# written. Endpoint hashing detects a change between the two, not a change and
+# change back in between. Files found under an input directory that the
+# pipeline does not declare are recorded by number, not name: an undeclared
+# file's name has not been through the publish test.
+
+# The paths in a file target's command when it is a literal: "a.csv" or
+# c("a.csv", "b.csv"). Anything computed is known only after the run.
+.literal_paths <- function(command) {
+  expr <- tryCatch(parse(text = command)[[1]], error = function(e) NULL)
+  if (is.character(expr)) {
+    return(expr)
+  }
+  if (is.call(expr) && identical(expr[[1]], as.name("c"))) {
+    parts <- as.list(expr)[-1]
+    if (length(parts) && all(vapply(parts, is.character, logical(1)))) {
+      return(unlist(parts))
+    }
+  }
+  character(0)
+}
+
+# README files in private zones are notes about the data, not data.
+.files_under <- function(dirs) {
+  files <- as.character(unlist(lapply(sub("/+$", "", dirs), function(d) {
+    list.files(d, recursive = TRUE, full.names = TRUE)
+  })))
+  sort(unique(files[!grepl("^README", basename(files))]))
+}
+
+.hash_paths <- function(paths) {
+  lapply(paths, function(p) list(path = p, sha256 = .sha256_file(p)))
+}
+
+# Run before tar_make(): the declared inputs, the literal paths of file
+# targets, and everything under the input directories.
+.inputs_before <- function(
+  script,
+  extra_inputs = character(0),
+  documents = character(0),
+  input_dirs = character(0),
+  callr_arguments = list(show = FALSE)
+) {
+  manifest <- as.data.frame(targets::tar_manifest(
+    fields = c("name", "command", "format"),
+    script = script,
+    callr_arguments = callr_arguments
+  ))
+  files <- manifest[!is.na(manifest$format) & manifest$format == "file", ]
+  literal <- unlist(lapply(files$command, .literal_paths))
+  paths <- unique(c(extra_inputs, documents, literal, .files_under(input_dirs)))
+  .hash_paths(paths)
+}
+
+# File targets with no upstream target: inputs, not outputs.
+.input_file_paths <- function(meta, network) {
+  vertices <- network$vertices
+  target_names <- vertices$name[vertices$type %in% c("stem", "pattern")]
+  files <- meta[!is.na(meta$format) & meta$format == "file", , drop = FALSE]
+  is_input <- vapply(
+    files$name,
+    function(nm) !any(network$edges$from[network$edges$to == nm] %in% target_names),
+    logical(1)
+  )
+  unique(unlist(files$path[is_input]))
+}
+
+.stability_block <- function(before, declared) {
+  if (is.null(before)) {
+    return(NULL)
+  }
+  before_paths <- vapply(before, function(b) .as_chr(b$path), "")
+  paths <- unique(c(before_paths, declared))
+  undeclared <- 0L
+  lapply(paths, function(p) {
+    hit <- before[before_paths == p]
+    entry <- list(
+      path = p,
+      declared = p %in% declared,
+      undeclared_index = NA_integer_,
+      sha256_before = if (length(hit)) .as_chr(hit[[1]]$sha256) else NA_character_,
+      sha256_after = .sha256_file(p)
+    )
+    if (!entry$declared) {
+      undeclared <<- undeclared + 1L
+      entry$path <- NA_character_
+      entry$undeclared_index <- undeclared
+    }
+    entry
+  })
+}
+
+# Origins --------------------------------------------------------------------------
+#
+# A target the run skipped was reused from an earlier build. Its origin is the
+# newest earlier ledger in the same directory that built it with the same
+# command, dependencies and data, or that already names its origin; otherwise
+# it is unknown.
+
+.prior_ledgers <- function(path, run_id) {
+  files <- list.files(path, pattern = "^[0-9]{8}-[0-9]{6}\\.json$")
+  ids <- sort(sub("\\.json$", "", files), decreasing = TRUE)
+  ids <- ids[ids < run_id]
+  lapply(ids, function(id) {
+    tryCatch(
+      jsonlite::read_json(file.path(path, paste0(id, ".json"))),
+      error = function(e) NULL
+    )
+  })
+}
+
+.origin_of <- function(target, priors) {
+  same <- function(a, b) identical(.as_chr(a), .as_chr(b))
+  for (prior in priors) {
+    for (t in prior$targets) {
+      if (
+        !same(t$name, target$name) ||
+          !same(t$data, target$data) ||
+          !same(t$command, target$command) ||
+          !same(t$depend, target$depend)
+      ) {
+        next
+      }
+      if (!.is_missing(t$origin_run_id)) {
+        return(.as_chr(t$origin_run_id))
+      }
+      if (same(t$status, "completed")) {
+        return(.as_chr(prior$run$run_id))
+      }
+    }
+  }
+  NA_character_
+}
+
+.add_origins <- function(targets_block, run_id, priors) {
+  lapply(targets_block, function(t) {
+    built <- identical(t$status, "completed")
+    t$built <- built
+    t$origin_run_id <- if (built) {
+      run_id
+    } else if (identical(t$status, "skipped")) {
+      .origin_of(t, priors)
+    } else {
+      NA_character_
+    }
+    t
+  })
+}
+
 # Only the stamp's four known fields; objects holds SHA-256 strings only.
 .whitelist_stamp <- function(stamp) {
   objects <- stamp$objects
@@ -351,6 +502,17 @@
 #' else the run writes, notably the targets store and debug output, must be
 #' git-ignored, or the tree is recorded as not clean and C1 fails.
 #'
+#' Schema version 2 adds:
+#' * `environment`: both tiers of [capture_environment()];
+#' * `input_stability`: each input's SHA-256 before the run (`inputs_before`,
+#'   which [run_targets_safe()] supplies) and when the ledger is written. A
+#'   file under `input_dirs` that is neither an input file target nor in
+#'   `extra_inputs` or `documents` is recorded as undeclared, by number and
+#'   without its name;
+#' * per target, `built` and `origin_run_id`: the run that built a reused
+#'   (skipped) target, found in the earlier ledgers in `path`, or `null`
+#'   when unknown.
+#'
 #' @param path Directory the ledger is written to (e.g. `"docs/runs"`);
 #'   ignored by the clean-tree check.
 #' @param run_id The run id (`YYYYMMDD-HHMMSS`).
@@ -369,6 +531,13 @@
 #' @param repo The git repository.
 #' @param requested Target names the run was restricted to, if any.
 #' @param exit_code The runner's exit code so far.
+#' @param inputs_before `NULL`, or the inputs hashed before the run: a list of
+#'   `list(path =, sha256 =)`. Without it, input stability is not recorded
+#'   and check C10 is not evaluated.
+#' @param input_dirs Directories holding the pipeline's input data (e.g.
+#'   `"data/raw"`), inventoried for undeclared files.
+#' @param env_packages Packages for the computational tier of
+#'   [capture_environment()].
 #' @return The ledger's path, invisibly.
 #' @seealso [audit_run()], [run_targets_safe()].
 #' @examples
@@ -390,7 +559,10 @@ write_run_ledger <- function(
   script = NULL,
   repo = ".",
   requested = character(0),
-  exit_code = NA_integer_
+  exit_code = NA_integer_,
+  inputs_before = NULL,
+  input_dirs = character(0),
+  env_packages = character(0)
 ) {
   .require_pkgs(c("targets", "jsonlite", "digest"), "write_run_ledger")
   if (is.null(store)) {
@@ -409,8 +581,31 @@ write_run_ledger <- function(
     store = store,
     reporter = "silent"
   )
+  declared <- unique(c(
+    .input_file_paths(meta, network),
+    extra_inputs,
+    documents
+  ))
+  if (length(input_dirs) && !is.null(inputs_before)) {
+    seen <- vapply(inputs_before, function(b) .as_chr(b$path), "")
+    late <- setdiff(.files_under(input_dirs), seen)
+    inputs_before <- c(inputs_before, lapply(late, function(p) {
+      list(path = p, sha256 = NA_character_)
+    }))
+  }
+  targets_block <- .add_origins(
+    .targets_block(
+      meta,
+      .read_progress(store),
+      network,
+      .function_spans(repo),
+      store
+    ),
+    run_id,
+    .prior_ledgers(path, run_id)
+  )
   ledger <- list(
-    schema_version = 1L,
+    schema_version = 2L,
     run = list(
       run_id = run_id,
       written = format(Sys.time(), "%Y-%m-%d %H:%M:%S %Z"),
@@ -418,17 +613,13 @@ write_run_ledger <- function(
       exit_code = as.integer(exit_code)
     ),
     code = .code_block(repo, path, records),
+    environment = capture_environment(env_packages),
     inputs = .input_block(meta, extra_inputs),
+    input_stability = .stability_block(inputs_before, declared),
     documents = lapply(documents, function(p) {
       list(path = p, sha256 = .sha256_file(p))
     }),
-    targets = .targets_block(
-      meta,
-      .read_progress(store),
-      network,
-      .function_spans(repo),
-      store
-    ),
+    targets = targets_block,
     outdated = I(targets::tar_outdated(
       script = script,
       store = store,

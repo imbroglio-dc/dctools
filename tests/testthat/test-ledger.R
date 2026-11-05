@@ -10,7 +10,7 @@ test_that("the ledger records code, inputs and documents, without credentials", 
   skip_ledger_fixture()
   proj <- ledger_fixture()
   l <- read_fixture_ledger(proj)
-  expect_identical(l$schema_version, 1L)
+  expect_identical(l$schema_version, 2L)
   expect_identical(l$run$run_id, fixture_run_id)
   expect_identical(l$code$sha, .git_head(proj))
   expect_true(l$code$clean)
@@ -26,8 +26,9 @@ test_that("the ledger records code, inputs and documents, without credentials", 
     l$documents[[1]]$sha256,
     .sha256_file(file.path(proj, "decisions.yml"))
   )
+  # Not "secret" alone: the installed-package list may hold secretbase.
   expect_false(grepl(
-    "secret",
+    "user:secret",
     paste(readLines(fixture_ledger_path(proj)), collapse = "\n")
   ))
 })

@@ -8,6 +8,7 @@
       - Commit: [`<sha>`](https://example.com/o/r/tree/<sha>) (clean)
       - dctools: 9.9.9 (commit unknown)
       - Ledger: `20260101-000000.json`; provenance: `20260101-000000.provenance.md`
+      - Targets: 4 built this run, 0 reused (0 of unknown origin)
       
       | Check | Name | Status | Evaluated | Failed |
       |---|---|---|---|---|
@@ -20,6 +21,8 @@
       | C7 | Records | PASS | 1 | 0 |
       | C8 | Provenance | PASS | 2 | 0 |
       | C9 | Engine | PASS | 2 | 0 |
+      | C10 | Input stability | PASS | 2 | 0 |
+      | C11 | Environment | PASS | 4 | 0 |
       
       ## Verify by hand
       

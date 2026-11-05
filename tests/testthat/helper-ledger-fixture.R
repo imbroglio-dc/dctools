@@ -73,6 +73,7 @@ fixture_links <- function() {
     file.path(proj, "_targets.R")
   )
   writeLines("targets::tar_make(reporter = 'silent')", file.path(proj, "run.R"))
+  write_fixture_lock(proj)
   git <- function(...) {
     system2("git", c("-C", proj, ...), stdout = TRUE, stderr = TRUE)
   }
@@ -82,6 +83,13 @@ fixture_links <- function() {
   git("remote", "add", "origin", "https://user:secret@example.com/o/r.git")
   git("add", "-A")
   git("commit", "-q", "-m", "fixture")
+  # tar_manifest(), tar_network() and tar_outdated() source _targets.R in a
+  # child process, which loads dctools through DCTOOLS_TEST_SRC.
+  withr::local_envvar(DCTOOLS_TEST_SRC = dctools_src())
+  before <- withr::with_dir(
+    proj,
+    .inputs_before("_targets.R", documents = "decisions.yml", input_dirs = "data/raw")
+  )
   res <- run_rscript(
     proj,
     "run.R",
@@ -93,9 +101,6 @@ fixture_links <- function() {
   if (!fail && res$status != 0L) {
     stop("fixture pipeline failed: ", res$stderr)
   }
-  # tar_network() and tar_outdated() source _targets.R in a child process,
-  # which loads dctools through DCTOOLS_TEST_SRC.
-  withr::local_envvar(DCTOOLS_TEST_SRC = dctools_src())
   testthat::with_mocked_bindings(
     withr::with_dir(
       proj,
@@ -108,12 +113,30 @@ fixture_links <- function() {
         records = if (fail) character(0) else "output/record.html",
         store = "_targets",
         script = "_targets.R",
-        exit_code = if (fail) 1L else 0L
+        exit_code = if (fail) 1L else 0L,
+        inputs_before = before,
+        input_dirs = "data/raw",
+        env_packages = "jsonlite"
       )
     ),
     .dctools_engine = function() list(version = "9.9.9", remote_sha = "abc123")
   )
   proj
+}
+
+# An renv.lock matching this R and the installed jsonlite, so C11 passes.
+write_fixture_lock <- function(proj, version = as.character(utils::packageVersion("jsonlite"))) {
+  jsonlite::write_json(
+    list(
+      R = list(Version = paste(R.version$major, R.version$minor, sep = ".")),
+      Packages = list(
+        jsonlite = list(Package = "jsonlite", Version = version, Source = "Repository")
+      )
+    ),
+    file.path(proj, "renv.lock"),
+    auto_unbox = TRUE,
+    pretty = TRUE
+  )
 }
 
 ledger_fixture <- function(fail = FALSE) {
@@ -154,3 +177,17 @@ edit_ledger <- function(path, fn) {
 fixture_ledger_path <- function(proj) {
   file.path(proj, "docs", "runs", paste0(fixture_run_id, ".json"))
 }
+
+audit_copy <- function(proj) {
+  withr::with_dir(
+    proj,
+    audit_run(
+      fixture_ledger_path("."),
+      store = "_targets",
+      script = "_targets.R"
+    )
+  )
+}
+
+status_of <- function(result, check) result$status[result$check == check]
+detail_of <- function(result, check) result$detail[result$check == check][[1]]

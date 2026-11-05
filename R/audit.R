@@ -1,7 +1,7 @@
 # Run audit ---------------------------------------------------------------------
 #
-# A fixed catalogue of checks (C1-C9) of a run ledger against git, the targets
-# store and the files on disk. A check with nothing to evaluate is NOT
+# A fixed catalogue of checks (C1-C11) of a run ledger against git, the
+# targets store and the files on disk. A check with nothing to evaluate is NOT
 # EVALUATED, never PASS.
 
 .check_names <- c(
@@ -13,7 +13,9 @@
   C6 = "Decisions",
   C7 = "Records",
   C8 = "Provenance",
-  C9 = "Engine"
+  C9 = "Engine",
+  C10 = "Input stability",
+  C11 = "Environment"
 )
 
 .items <- function(
@@ -206,6 +208,17 @@
         .sha256_file(.object_path(store, nm))
       )
     )
+    # Schema 2: built only if the store shows it completed this run, and the
+    # built run is its own origin; a reused target cannot claim this run.
+    if ("built" %in% names(t)) {
+      completed <- identical(.progress_of(progress, nm), "completed")
+      origin <- .as_chr(t$origin_run_id)
+      this_run <- identical(origin, .as_chr(ledger$run$run_id))
+      same <- c(
+        same,
+        built = identical(isTRUE(t$built), completed) && identical(this_run, completed)
+      )
+    }
     .item(
       nm,
       all(same),
@@ -528,6 +541,127 @@
   )
 }
 
+# C10 Input stability ---------------------------------------------------------
+
+.input_label <- function(entry) {
+  if (isTRUE(entry$declared)) {
+    .as_chr(entry$path)
+  } else {
+    sprintf("undeclared input file #%s", .as_chr(entry$undeclared_index))
+  }
+}
+
+.check_input_stability <- function(ledger) {
+  entries <- ledger$input_stability
+  items <- if (is.list(entries)) {
+    lapply(entries, function(e) {
+      before <- .as_chr(e$sha256_before)
+      after <- .as_chr(e$sha256_after)
+      label <- .input_label(e)
+      if (is.na(before)) {
+        .item(
+          label,
+          FALSE,
+          "not hashed before the run (list it in extra_inputs or put it under input_dirs)"
+        )
+      } else if (is.na(after)) {
+        .item(label, FALSE, "missing when the ledger was written")
+      } else if (!isTRUE(e$declared)) {
+        .item(label, FALSE, "undeclared: not a file target or a declared input")
+      } else {
+        .item(label, identical(before, after), "changed during the run")
+      }
+    })
+  }
+  .check_result(
+    "C10",
+    .bind_items(items),
+    "the ledger records no pre-run input digests (write it through run_targets_safe())"
+  )
+}
+
+# C11 Environment -------------------------------------------------------------
+
+# What library() would load: the first installed copy along the library path.
+.installed_entry <- function(installed, package) {
+  for (entry in installed) {
+    if (identical(.as_chr(entry$package), package)) {
+      return(entry)
+    }
+  }
+  NULL
+}
+
+.check_environment <- function(ledger, repo) {
+  env <- ledger$environment
+  lock_path <- file.path(.git_root(repo), "renv.lock")
+  reason <- if (!is.list(env)) {
+    "the ledger records no environment"
+  } else if (!file.exists(lock_path)) {
+    "no renv.lock to compare the environment with"
+  }
+  if (!is.null(reason)) {
+    return(.check_result("C11", .items(), reason))
+  }
+  lock <- jsonlite::read_json(lock_path)
+  installed <- env$full$installed
+  package_items <- lapply(names(lock$Packages), function(package) {
+    want <- lock$Packages[[package]]
+    have <- .installed_entry(installed, package)
+    if (is.null(have)) {
+      return(.item(package, FALSE, "in renv.lock but not installed"))
+    }
+    want_sha <- .as_chr(want$RemoteSha)
+    have_sha <- .as_chr(have$remote_sha)
+    if (!identical(.as_chr(want$Version), .as_chr(have$version))) {
+      .item(
+        package,
+        FALSE,
+        sprintf(
+          "installed %s, renv.lock has %s",
+          .as_chr(have$version),
+          .as_chr(want$Version)
+        )
+      )
+    } else if (!is.na(want_sha) && !identical(want_sha, have_sha)) {
+      .item(package, FALSE, "installed from a different commit than renv.lock")
+    } else {
+      .item(package, TRUE)
+    }
+  })
+  .check_result(
+    "C11",
+    .bind_items(c(
+      list(
+        .item(
+          "renv.lock unchanged since the run",
+          identical(.sha256_file(lock_path), .as_chr(ledger$code$renv_lock_sha256)),
+          "renv.lock differs from the one the run recorded"
+        ),
+        .item(
+          "full environment recorded",
+          is.list(installed),
+          "the ledger records no installed packages"
+        ),
+        .item(
+          "R version",
+          identical(
+            .as_chr(lock$R$Version),
+            .as_chr(env$computational$r_version)
+          ),
+          sprintf(
+            "ran under R %s, renv.lock has %s",
+            .as_chr(env$computational$r_version),
+            .as_chr(lock$R$Version)
+          )
+        )
+      ),
+      if (is.list(installed)) package_items
+    )),
+    ""
+  )
+}
+
 .verdict <- function(status) {
   if (all(status == "PASS")) {
     "PASS"
@@ -559,6 +693,22 @@
 #'   value has complete provenance, and no number was printed without it.
 #' * **C9 Engine**: dctools was installed from a pushed commit, and the
 #'   audit ran under the same dctools as the run.
+#' * **C10 Input stability**: every input hashed before the run has the same
+#'   SHA-256 when the ledger was written, every input file target was hashed
+#'   before the run, and no file under the input directories is undeclared.
+#'   Endpoint hashing does not detect a file changed and restored during the
+#'   run.
+#' * **C11 Environment**: the run's R version and installed packages (the
+#'   first copy on the library path) match `renv.lock`, including
+#'   `RemoteSha` where the lockfile records one, and `renv.lock` is the one
+#'   the run recorded. BLAS, LAPACK, locale and threads are recorded, not
+#'   compared.
+#'
+#' **Built or reused.** Each target in the ledger records whether this run
+#' built it and, for a reused target, the run that built it when an earlier
+#' ledger shows it (`origin_run_id`). An unknown origin is recorded, not
+#' failed: reuse with a known origin is a release requirement, not one for
+#' every run.
 #'
 #' **Not covered.** Record content that does not come from a dctools report
 #' (anything a record reads or computes without stamping it) is not checked.
@@ -623,7 +773,9 @@ audit_run <- function(ledger_path, store = NULL, script = NULL, repo = ".") {
     .check_decisions(ledger),
     .check_records(ledger, store, reports),
     .check_provenance(ledger, reports),
-    .check_engine(ledger)
+    .check_engine(ledger),
+    .check_input_stability(ledger),
+    .check_environment(ledger, repo)
   ))
   attr(result, "verdict") <- .verdict(result$status)
   .write_audit_files(ledger, result, reports, dirname(ledger_path))

@@ -45,7 +45,10 @@ the current time.}
 \item{ledger}{\code{NULL}, or a named list turning on the run ledger and audit
 (see \code{\link[=write_run_ledger]{write_run_ledger()}} and \code{\link[=audit_run]{audit_run()}}): \code{dir} (default
 \code{"docs/runs"}), \code{reportable}, \code{links}, \code{extra_inputs}, \code{documents},
-\code{records}. With a ledger, a working tree with uncommitted or untracked
+\code{records}, \code{input_dirs} and \code{env_packages}. The declared inputs, the
+literal paths of file targets and the files under \code{input_dirs} are
+hashed before the pipeline runs, for the ledger's input stability
+record. With a ledger, a working tree with uncommitted or untracked
 files other than \code{dir} and the declared \code{records} is refused before the
 pipeline runs (runner failure \code{dctools_runner_dirty_tree_error}), so the
 targets store and debug output must be git-ignored; after the run the

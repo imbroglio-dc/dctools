@@ -1,5 +1,19 @@
 # dctools (development version)
 
+* Run ledger schema 2. `capture_environment()` records the computational
+  tier (R, BLAS/LAPACK, RNG kind, collation locale, thread settings, and
+  versions plus `RemoteSha` of named packages) and the full tier (OS and
+  kernel, locales, time zone, library paths, every installed package);
+  assigning the computational tier to a global in `_targets.R` makes the
+  targets that reference it rebuild when it drifts. `run_targets_safe()`
+  hashes inputs before the run (declared inputs, literal file-target paths,
+  files under the new `input_dirs`), and `write_run_ledger()` records them
+  with their post-run digests; undeclared files are recorded by number, not
+  name. Each target records `built` and, when reused, the earlier run that
+  built it (`origin_run_id`, or unknown). `audit_run()` adds C10 Input
+  stability and C11 Environment (installed packages and R against
+  `renv.lock`), and C2 now fails a target whose built label disagrees with
+  the store.
 * Disclosure-safe reports, ported from sepsis_burn: `create_report()`,
   `record_count()`, `record_unprinted_count()`, `add_line()`,
   `add_literal_line()`, `add_data_frame()`, `add_count_table()`,
