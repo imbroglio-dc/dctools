@@ -56,3 +56,5 @@ tbl1 <- function(data, by = NULL, include = NULL,
   if (isTRUE(add_p) && !is.null(by)) tbl <- gtsummary::add_p(tbl)
   tbl
 }
+
+# trust probe (not for merge): a change outside the frozen paths.
