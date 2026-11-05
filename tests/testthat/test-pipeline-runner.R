@@ -296,7 +296,7 @@ test_that("a clean run exits 0 and prints only the allowlist", {
         "== run status ==",
         "-- TOY --",
         "prep: completed",
-        "decisions: 4"
+        "decisions: <5"
       ) %in%
         lines
     ),

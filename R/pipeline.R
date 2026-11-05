@@ -530,9 +530,28 @@ read_debug_status <- function(debug_dir, target_name) {
 
 # One "  <target>: class=.. code=.. <count>=.. warnings: N" line per sidecar;
 # every field is re-checked here, whatever wrote the file.
-.format_status <- function(s, mask_below = 5L) {
+# With an allowlist (the closed output schema), a branch is shown as its
+# pattern, and a target, code or count name outside the allowlist is withheld.
+.format_status <- function(
+  s,
+  mask_below = 5L,
+  allowlist = NULL,
+  parents = character(0)
+) {
   s <- .sanitize_status(s)
   counts <- unlist(s$counts)
+  if (!is.null(allowlist)) {
+    if (!is.na(s$target) && s$target %in% names(parents)) {
+      s$target <- parents[[s$target]]
+    }
+    if (!is.na(s$target) && !s$target %in% allowlist) {
+      s$target <- NA_character_
+    }
+    if (!is.na(s$code) && !s$code %in% allowlist) {
+      s$code <- "?"
+    }
+    counts <- counts[names(counts) %in% allowlist]
+  }
   paste0(
     "  ",
     if (is.na(s$target)) "?" else s$target,
@@ -557,28 +576,59 @@ read_debug_status <- function(debug_dir, target_name) {
   )
 }
 
+# With an allowlist, the closed output schema applies: branches are folded into
+# their pattern, targets outside the allowlist are withheld, and a final line
+# counts everything withheld (including `withheld` lines from elsewhere).
 .format_run_summary <- function(
   progress,
   statuses,
   run_status_lines,
   debug_dir,
-  mask_below = 5L
+  mask_below = 5L,
+  allowlist = NULL,
+  parents = character(0),
+  withheld = 0L
 ) {
   ok <- grepl(.safe_name_pattern, progress$name) &
     grepl(.safe_name_pattern, progress$progress)
+  branch_lines <- character(0)
+  if (!is.null(allowlist)) {
+    is_branch <- progress$name %in% names(parents)
+    branch_lines <- .branch_lines(progress[ok, , drop = FALSE], parents, mask_below)
+    listed <- ok & !is_branch & progress$name %in% allowlist
+    withheld <- withheld + sum(ok & !is_branch & !listed) + sum(!ok)
+    ok <- listed
+  }
   out <- c(
     "== targets ==",
-    sprintf("%s: %s", progress$name[ok], progress$progress[ok])
+    sprintf("%s: %s", progress$name[ok], progress$progress[ok]),
+    branch_lines
   )
   if (length(statuses)) {
     out <- c(
       out,
       "== errors and warnings (detail in the debug directory) ==",
-      vapply(statuses, .format_status, "", mask_below = mask_below)
+      vapply(
+        statuses,
+        .format_status,
+        "",
+        mask_below = mask_below,
+        allowlist = allowlist,
+        parents = parents
+      )
     )
   }
   if (length(run_status_lines)) {
     out <- c(out, "== run status ==", run_status_lines)
+  }
+  if (withheld > 0L) {
+    out <- c(
+      out,
+      sprintf(
+        "withheld: %d line(s) outside the output schema (detail in the debug directory)",
+        as.integer(withheld)
+      )
+    )
   }
   c(out, paste0("debug directory: ", debug_dir))
 }
@@ -701,10 +751,27 @@ read_debug_status <- function(debug_dir, target_name) {
 #' next to the bundles [capture_target_debug()] writes. Only the newest `keep`
 #' run directories are kept.
 #'
-#' **Trust boundary.** Every field printed from the progress table and the
-#' sidecars is re-checked against identifier/integer patterns. The
-#' `== run status ==` lines are not: they are printed as given, so the status
-#' targets (or `format_status`) are responsible for their disclosure safety.
+#' **Closed output schema (version 1).** What is printed is decided by where
+#' each string came from. Before the run, an allowlist is built from the
+#' committed source: target names from `tar_manifest()`, and the symbols and
+#' identifier-shaped words of string constants in the project's R files
+#' (tracked by git, or `_targets.R`, `R/` and `code/` outside a repository).
+#' Then:
+#' * a target outside the allowlist is withheld; dynamic branches, whose names
+#'   hash their data, appear only as `<pattern>: <n> branches <progress>`,
+#'   with the count masked;
+#' * in a sidecar line, a branch shows as its pattern, and a target, code or
+#'   count name outside the allowlist shows as `?` or is dropped;
+#' * each `== run status ==` line must read `<identifier>: <value>`, with the
+#'   identifier allowlisted and the value an integer (masked below
+#'   `mask_below`) or an allowlisted identifier; any other line is replaced by
+#'   `[withheld: not in the output schema]` and kept in `runner.log`;
+#' * a final `withheld:` line counts what was held back.
+#' If the manifest cannot be read, the allowlist is empty and every target
+#' line is withheld. The schema is only as safe as the committed source: a
+#' restricted value written into the code would be allowlisted. Output that R
+#' or the project prints before `run_targets_safe()` starts (an `.Rprofile`,
+#' package startup messages) is outside the runner's reach.
 #'
 #' A project calls this from a small script, so it can be run as one command
 #' and exit with the status:
@@ -888,8 +955,30 @@ run_targets_safe <- function(
       # show = FALSE: targets defaults callr's `show` to TRUE, which copies
       # everything the pipeline process writes to this process's stdout too.
       callr_arguments <- list(stdout = tar_log, stderr = "2>&1", show = FALSE)
+      # The manifest feeds the output allowlist and the pre-run input hashes.
+      # If it cannot be read, the allowlist is empty: every target line is
+      # withheld (fail closed), and stability goes unrecorded.
+      manifest <- tryCatch(
+        .read_manifest(
+          targets::tar_config_get("script"),
+          callr_arguments = list(
+            stdout = file.path(debug_dir, "tar_manifest.log"),
+            stderr = "2>&1",
+            show = FALSE
+          )
+        ),
+        error = function(e) {
+          log_line("reading the manifest failed: ", conditionMessage(e))
+          NULL
+        }
+      )
+      allowlist <- if (is.null(manifest)) {
+        character(0)
+      } else {
+        .output_allowlist(manifest$name, ".")
+      }
       inputs_before <- NULL
-      if (!is.null(ledger)) {
+      if (!is.null(ledger) && !is.null(manifest)) {
         # A failure here leaves stability unrecorded (C10 not evaluated)
         # rather than stopping the run; its message stays in the log.
         inputs_before <- tryCatch(
@@ -898,11 +987,7 @@ run_targets_safe <- function(
             ledger$extra_inputs,
             ledger$documents,
             ledger$input_dirs,
-            callr_arguments = list(
-              stdout = file.path(debug_dir, "tar_manifest.log"),
-              stderr = "2>&1",
-              show = FALSE
-            )
+            manifest = manifest
           ),
           error = function(e) {
             log_line("input hashing before the run failed: ", conditionMessage(e))
@@ -946,12 +1031,19 @@ run_targets_safe <- function(
         targets::tar_read_raw,
         format_status
       )
+      status_lines <- .schema_status_lines(status_lines, allowlist, mask_below)
+      for (line in attr(status_lines, "withheld")) {
+        log_line("withheld status line: ", line)
+      }
       out <- .format_run_summary(
         progress,
         statuses,
         status_lines,
         debug_dir,
-        mask_below
+        mask_below,
+        allowlist = allowlist,
+        parents = .branch_parents(targets::tar_config_get("store")),
+        withheld = length(attr(status_lines, "withheld"))
       )
       cat(out, sep = "\n")
       status <- if (!made || any(progress$progress == "errored")) 1L else 0L

@@ -87,10 +87,29 @@ and \code{tar_make.log} (the pipeline process's output) in the debug directory,
 next to the bundles \code{\link[=capture_target_debug]{capture_target_debug()}} writes. Only the newest \code{keep}
 run directories are kept.
 
-\strong{Trust boundary.} Every field printed from the progress table and the
-sidecars is re-checked against identifier/integer patterns. The
-\verb{== run status ==} lines are not: they are printed as given, so the status
-targets (or \code{format_status}) are responsible for their disclosure safety.
+\strong{Closed output schema (version 1).} What is printed is decided by where
+each string came from. Before the run, an allowlist is built from the
+committed source: target names from \code{tar_manifest()}, and the symbols and
+identifier-shaped words of string constants in the project's R files
+(tracked by git, or \verb{_targets.R}, \verb{R/} and \verb{code/} outside a repository).
+Then:
+\itemize{
+\item a target outside the allowlist is withheld; dynamic branches, whose names
+hash their data, appear only as \verb{<pattern>: <n> branches <progress>},
+with the count masked;
+\item in a sidecar line, a branch shows as its pattern, and a target, code or
+count name outside the allowlist shows as \verb{?} or is dropped;
+\item each \verb{== run status ==} line must read \verb{<identifier>: <value>}, with the
+identifier allowlisted and the value an integer (masked below
+\code{mask_below}) or an allowlisted identifier; any other line is replaced by
+\verb{[withheld: not in the output schema]} and kept in \code{runner.log};
+\item a final \verb{withheld:} line counts what was held back.
+If the manifest cannot be read, the allowlist is empty and every target
+line is withheld. The schema is only as safe as the committed source: a
+restricted value written into the code would be allowlisted. Output that R
+or the project prints before \code{run_targets_safe()} starts (an \code{.Rprofile},
+package startup messages) is outside the runner's reach.
+}
 
 A project calls this from a small script, so it can be run as one command
 and exit with the status:
