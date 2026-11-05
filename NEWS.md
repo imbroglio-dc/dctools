@@ -1,3 +1,17 @@
+# dctools (development version)
+
+* Computation lock v0 (schema version 1): `computation_lock()`,
+  `write_computation_lock()`, `read_computation_lock()` (also at a git ref),
+  `check_computation_lock()` and `lock_review_table()`. For each
+  decision-linked target, the lock records the top-level call of its command
+  and each argument as a `literal`, a `config` value (from a declared YAML
+  file), a `reference` or `unresolved` with the expression and reason, plus
+  the `tar_target()` location. Project code is parsed, never run, and helpers
+  are not followed. The JSON carries no timestamp, commit or version, so the
+  check regenerates it from source and fails (`dctools_lock_mismatch`) on any
+  byte difference. The review table shows changes against a baseline lock.
+  `yaml` joins Suggests.
+
 # dctools 0.1.0
 
 First release: the first verifier pin for analysis projects (the run ledger,
