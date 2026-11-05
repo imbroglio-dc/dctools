@@ -48,6 +48,7 @@
       run_id,
       run_id
     ),
+    .targets_line(ledger$targets),
     "",
     "| Check | Name | Status | Evaluated | Failed |",
     "|---|---|---|---|---|",
@@ -124,6 +125,23 @@
     },
     "Rscript -e 'utils::packageDescription(\"dctools\")$RemoteSha'   # C9: compare with the dctools commit above",
     "```"
+  )
+}
+
+# Built versus reused, from schema-2 ledgers; nothing for older ones.
+.targets_line <- function(targets) {
+  has_origin <- vapply(targets, function(t) "built" %in% names(t), logical(1))
+  if (!length(targets) || !all(has_origin)) {
+    return(NULL)
+  }
+  built <- vapply(targets, function(t) isTRUE(t$built), logical(1))
+  reused <- vapply(targets, function(t) identical(.as_chr(t$status), "skipped"), logical(1))
+  unknown <- reused & vapply(targets, function(t) .is_missing(t$origin_run_id), logical(1))
+  sprintf(
+    "- Targets: %d built this run, %d reused (%d of unknown origin)",
+    sum(built),
+    sum(reused),
+    sum(unknown)
   )
 }
 

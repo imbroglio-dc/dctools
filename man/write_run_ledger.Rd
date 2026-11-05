@@ -16,7 +16,10 @@ write_run_ledger(
   script = NULL,
   repo = ".",
   requested = character(0),
-  exit_code = NA_integer_
+  exit_code = NA_integer_,
+  inputs_before = NULL,
+  input_dirs = character(0),
+  env_packages = character(0)
 )
 }
 \arguments{
@@ -48,6 +51,16 @@ project's configuration.}
 \item{requested}{Target names the run was restricted to, if any.}
 
 \item{exit_code}{The runner's exit code so far.}
+
+\item{inputs_before}{\code{NULL}, or the inputs hashed before the run: a list of
+\code{list(path =, sha256 =)}. Without it, input stability is not recorded
+and check C10 is not evaluated.}
+
+\item{input_dirs}{Directories holding the pipeline's input data (e.g.
+\code{"data/raw"}), inventoried for undeclared files.}
+
+\item{env_packages}{Packages for the computational tier of
+\code{\link[=capture_environment]{capture_environment()}}.}
 }
 \value{
 The ledger's path, invisibly.
@@ -75,6 +88,19 @@ The clean-tree check ignores the ledger directory and the declared
 \code{records} (a run rewrites them; check C7 vouches for records). Anything
 else the run writes, notably the targets store and debug output, must be
 git-ignored, or the tree is recorded as not clean and C1 fails.
+
+Schema version 2 adds:
+\itemize{
+\item \code{environment}: both tiers of \code{\link[=capture_environment]{capture_environment()}};
+\item \code{input_stability}: each input's SHA-256 before the run (\code{inputs_before},
+which \code{\link[=run_targets_safe]{run_targets_safe()}} supplies) and when the ledger is written. A
+file under \code{input_dirs} that is neither an input file target nor in
+\code{extra_inputs} or \code{documents} is recorded as undeclared, by number and
+without its name;
+\item per target, \code{built} and \code{origin_run_id}: the run that built a reused
+(skipped) target, found in the earlier ledgers in \code{path}, or \code{null}
+when unknown.
+}
 }
 \examples{
 \dontrun{

@@ -42,7 +42,23 @@ reportable report at the ledger's hash.
 value has complete provenance, and no number was printed without it.
 \item \strong{C9 Engine}: dctools was installed from a pushed commit, and the
 audit ran under the same dctools as the run.
+\item \strong{C10 Input stability}: every input hashed before the run has the same
+SHA-256 when the ledger was written, every input file target was hashed
+before the run, and no file under the input directories is undeclared.
+Endpoint hashing does not detect a file changed and restored during the
+run.
+\item \strong{C11 Environment}: the run's R version and installed packages (the
+first copy on the library path) match \code{renv.lock}, including
+\code{RemoteSha} where the lockfile records one, and \code{renv.lock} is the one
+the run recorded. BLAS, LAPACK, locale and threads are recorded, not
+compared.
 }
+
+\strong{Built or reused.} Each target in the ledger records whether this run
+built it and, for a reused target, the run that built it when an earlier
+ledger shows it (\code{origin_run_id}). An unknown origin is recorded, not
+failed: reuse with a known origin is a release requirement, not one for
+every run.
 
 \strong{Not covered.} Record content that does not come from a dctools report
 (anything a record reads or computes without stamping it) is not checked.

@@ -641,7 +641,9 @@ read_debug_status <- function(debug_dir, target_name) {
     "links",
     "extra_inputs",
     "documents",
-    "records"
+    "records",
+    "input_dirs",
+    "env_packages"
   )
   if (
     !is.list(ledger) ||
@@ -661,7 +663,9 @@ read_debug_status <- function(debug_dir, target_name) {
     reportable = character(0),
     extra_inputs = character(0),
     documents = character(0),
-    records = character(0)
+    records = character(0),
+    input_dirs = character(0),
+    env_packages = character(0)
   )
   utils::modifyList(defaults, ledger)
 }
@@ -734,7 +738,10 @@ read_debug_status <- function(debug_dir, target_name) {
 #' @param ledger `NULL`, or a named list turning on the run ledger and audit
 #'   (see [write_run_ledger()] and [audit_run()]): `dir` (default
 #'   `"docs/runs"`), `reportable`, `links`, `extra_inputs`, `documents`,
-#'   `records`. With a ledger, a working tree with uncommitted or untracked
+#'   `records`, `input_dirs` and `env_packages`. The declared inputs, the
+#'   literal paths of file targets and the files under `input_dirs` are
+#'   hashed before the pipeline runs, for the ledger's input stability
+#'   record. With a ledger, a working tree with uncommitted or untracked
 #'   files other than `dir` and the declared `records` is refused before the
 #'   pipeline runs (runner failure `dctools_runner_dirty_tree_error`), so the
 #'   targets store and debug output must be git-ignored; after the run the
@@ -881,6 +888,28 @@ run_targets_safe <- function(
       # show = FALSE: targets defaults callr's `show` to TRUE, which copies
       # everything the pipeline process writes to this process's stdout too.
       callr_arguments <- list(stdout = tar_log, stderr = "2>&1", show = FALSE)
+      inputs_before <- NULL
+      if (!is.null(ledger)) {
+        # A failure here leaves stability unrecorded (C10 not evaluated)
+        # rather than stopping the run; its message stays in the log.
+        inputs_before <- tryCatch(
+          .inputs_before(
+            targets::tar_config_get("script"),
+            ledger$extra_inputs,
+            ledger$documents,
+            ledger$input_dirs,
+            callr_arguments = list(
+              stdout = file.path(debug_dir, "tar_manifest.log"),
+              stderr = "2>&1",
+              show = FALSE
+            )
+          ),
+          error = function(e) {
+            log_line("input hashing before the run failed: ", conditionMessage(e))
+            NULL
+          }
+        )
+      }
       made <- tryCatch(
         {
           # `names` is a tidyselect expression captured unevaluated, so each
@@ -937,7 +966,10 @@ run_targets_safe <- function(
           records = ledger$records,
           requested = selected,
           # the status before the audit: the audit's verdict is not part of it
-          exit_code = status
+          exit_code = status,
+          inputs_before = inputs_before,
+          input_dirs = ledger$input_dirs,
+          env_packages = ledger$env_packages
         )
         audit <- audit_run(ledger_file)
         cat(.format_audit_summary(audit, ledger_file), sep = "\n")

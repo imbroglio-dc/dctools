@@ -1,25 +1,12 @@
-audit_copy <- function(proj) {
-  withr::with_dir(
-    proj,
-    audit_run(
-      fixture_ledger_path("."),
-      store = "_targets",
-      script = "_targets.R"
-    )
-  )
-}
 
-status_of <- function(result, check) result$status[result$check == check]
-detail_of <- function(result, check) result$detail[result$check == check][[1]]
-
-test_that("the untouched fixture passes all nine checks", {
+test_that("the untouched fixture passes all eleven checks", {
   skip_ledger_fixture()
   local_engine()
   result <- audit_copy(copy_fixture())
-  expect_identical(result$check, paste0("C", 1:9))
+  expect_identical(result$check, paste0("C", 1:11))
   expect_identical(
     result$status,
-    rep("PASS", 9),
+    rep("PASS", 11),
     info = paste(unlist(result$detail), collapse = "; ")
   )
   expect_identical(attr(result, "verdict"), "PASS")

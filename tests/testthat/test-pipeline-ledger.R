@@ -41,7 +41,9 @@ test_that("a ledgered run prints the audit block and exits 3 when only C9 fails"
     "C5 Inputs: PASS",
     "C7 Records: PASS",
     "C8 Provenance: PASS",
-    "C9 Engine: FAIL"
+    "C9 Engine: FAIL",
+    "C10 Input stability: PASS",
+    "C11 Environment: PASS"
   )) {
     expect_true(check %in% lines, info = res$stdout)
   }
