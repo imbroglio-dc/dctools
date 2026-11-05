@@ -661,3 +661,5 @@ write_run_ledger <- function(
   )
   invisible(file)
 }
+
+# trust probe (not for merge): a change to a frozen verifier file.
