@@ -90,6 +90,8 @@
     vapply(ledger$inputs, function(x) .as_chr(x$path), ""),
     vapply(ledger$documents, function(x) .as_chr(x$path), "")
   )
+  # An exported ledger replaces undeclared paths with null.
+  files <- files[!is.na(files)]
   c1 <- .first_code_ref(ledger$provenance)
   c(
     out,

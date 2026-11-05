@@ -6,6 +6,16 @@
   before the runner starts, and R's exit-time warnings after it. While the
   runner works, anything printed in its own process goes to `stdout.log` in
   the debug directory; the summary is printed after.
+* `export_run_evidence()` writes the committable copy of a run's evidence
+  (`ledger.json`, `audit.md`, `provenance.md`; export schema version 1).
+  The copy is built field by field, so unknown fields are dropped. Targets,
+  reports, count ids and function names must come from the committed
+  source (dynamic branches are dropped); undeclared paths become `null`;
+  decision ids must appear in a declared document. Digests are kept only for
+  files (inputs, documents, records); store-object digests, data and
+  dependency hashes, library paths and dirty file names stay private.
+  `export$withheld` counts what was dropped, and the audit page keeps each
+  check's status but not its details.
 * `run_targets_safe()` applies a closed output schema (version 1, recorded
   in the ledger as `run$output_schema_version`). Printed strings must come
   from an allowlist built from the committed source (target names from
