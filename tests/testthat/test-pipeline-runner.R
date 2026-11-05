@@ -164,7 +164,7 @@ test_that("bad arguments: exit 2, only the class on stdout, detail in runner.log
     status <- run_targets_safe(c("--names", "x;y"), run_id = "20260101-000000")
   )
   expect_identical(status, 2L)
-  expect_identical(out, "runner failed: dctools_runner_usage_error")
+  expect_identical(out, c("== dctools runner output schema 1 ==", "runner failed: dctools_runner_usage_error", "== end of runner output =="))
   log <- readLines(file.path(
     proj,
     "data/processed/debug/20260101-000000/runner.log"
@@ -183,7 +183,7 @@ test_that("a debug root outside the private root fails before writing anything",
     status <- run_targets_safe(debug_root = "output/debug")
   )
   expect_identical(status, 2L)
-  expect_identical(out, "runner failed: dctools_unsafe_path_error")
+  expect_identical(out, c("== dctools runner output schema 1 ==", "runner failed: dctools_unsafe_path_error", "== end of runner output =="))
   expect_length(list.files(proj, recursive = TRUE, all.files = TRUE), 0L)
 })
 
@@ -195,7 +195,7 @@ test_that("a bad run_id is a runner failure", {
   withr::local_dir(proj)
   out <- utils::capture.output(status <- run_targets_safe(run_id = "../x"))
   expect_identical(status, 2L)
-  expect_identical(out, "runner failed: dctools_runner_usage_error")
+  expect_identical(out, c("== dctools runner output schema 1 ==", "runner failed: dctools_runner_usage_error", "== end of runner output =="))
 })
 
 # End to end on a toy pipeline, through an Rscript shim as a project would ------
@@ -245,7 +245,8 @@ make_toy_project <- function(env = parent.frame()) {
       load_dctools_line,
       "quit(status = run_targets_safe(",
       "  commandArgs(trailingOnly = TRUE),",
-      "  status_targets = c(TOY = 'run_status')",
+      "  status_targets = c(TOY = 'run_status'),",
+      "  format_status = function(x) { print('formatter EARLY-6'); x }",
       "), save = 'no')"
     ),
     file.path(proj, "code", "pipeline", "run_pipeline_safe.R")
@@ -304,7 +305,7 @@ test_that("a clean run exits 0 and prints only the allowlist", {
   )
   expect_match(
     res$stdout,
-    "debug directory: data/processed/debug/[0-9]{8}-[0-9]{6}\n$"
+    "debug directory: data/processed/debug/[0-9]{8}-[0-9]{6}\n== end of runner output ==\n$"
   )
   expect_false(grepl(leaky, res$stdout))
   dbg <- debug_runs(proj)
@@ -363,6 +364,31 @@ test_that("bad arguments through the shim exit 2 and print only the class", {
   proj <- make_toy_project()
   res <- run_shim(proj, c("--names", "x;y"))
   expect_identical(res$status, 2L)
-  expect_identical(res$stdout, "runner failed: dctools_runner_usage_error\n")
+  expect_identical(
+    res$stdout,
+    "== dctools runner output schema 1 ==\nrunner failed: dctools_runner_usage_error\n== end of runner output ==\n"
+  )
   expect_identical(res$stderr, "")
+})
+
+test_that("the runner's output lies between its markers; startup noise and stray prints do not", {
+  skip_end_to_end()
+  proj <- make_toy_project()
+  writeLines("cat('startup EARLY-5\\n')", file.path(proj, ".Rprofile"))
+  res <- run_shim(proj)
+  expect_identical(res$status, 0L, info = res$stdout)
+  lines <- strsplit(res$stdout, "\n")[[1]]
+  begin <- match("== dctools runner output schema 1 ==", lines)
+  expect_false(is.na(begin), info = res$stdout)
+  # The .Rprofile line comes first: a wrapper drops everything before `begin`.
+  expect_identical(lines[seq_len(begin - 1L)], "startup EARLY-5")
+  expect_identical(lines[length(lines)], "== end of runner output ==")
+  inside <- lines[seq(begin, length(lines))]
+  expect_false(any(grepl(leaky, inside)), info = res$stdout)
+  # The status formatter's print() went to stdout.log, not to stdout.
+  dbg <- debug_runs(proj)
+  expect_match(
+    paste(readLines(file.path(dbg, "stdout.log")), collapse = "\n"),
+    "formatter EARLY-6"
+  )
 })

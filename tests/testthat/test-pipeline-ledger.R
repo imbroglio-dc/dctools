@@ -63,7 +63,7 @@ test_that("a dirty working tree is refused before the pipeline runs", {
   expect_identical(res$status, 2L)
   expect_identical(
     res$stdout,
-    "runner failed: dctools_runner_dirty_tree_error\n"
+    "== dctools runner output schema 1 ==\nrunner failed: dctools_runner_dirty_tree_error\n== end of runner output ==\n"
   )
   expect_false(dir.exists(file.path(proj, "_targets")))
 })

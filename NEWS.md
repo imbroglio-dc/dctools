@@ -1,5 +1,11 @@
 # dctools (development version)
 
+* `run_targets_safe()` brackets its output with
+  `== dctools runner output schema 1 ==` and `== end of runner output ==`, so a
+  wrapper can drop what R, renv, an `.Rprofile` or package loading print
+  before the runner starts, and R's exit-time warnings after it. While the
+  runner works, anything printed in its own process goes to `stdout.log` in
+  the debug directory; the summary is printed after.
 * `run_targets_safe()` applies a closed output schema (version 1, recorded
   in the ledger as `run$output_schema_version`). Printed strings must come
   from an allowlist built from the committed source (target names from
