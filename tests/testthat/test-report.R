@@ -1,17 +1,13 @@
 # Synthetic-vector tests of the report's small-cell suppression (ported from
 # sepsis_burn tests/testthat/test-disclosure-safe-report.R). No data files are read.
 #
-# Adversary model (exact, brute force): a printed value is exact; a "<5" cell is
+# Adversary model (exact, exhaustive): a printed value is exact; a "<5" cell is
 # known to be 1..4; a "<suppr." cell is known to be 5..cap; an unprinted "~"
 # quantity is 0..cap; every registered equation holds. For each "<5" cell the
 # feasible set must still contain EVERY value 1..4 (no narrowing at all).
 
-# Feasible values of each primary-hidden var, given what is printed.
-feasible_values_of_small_counts <- function(
-  report,
-  decision,
-  cap = .count_upper_bound(report)
-) {
+# The unknowns and their domains under the adversary model.
+adversary_domains <- function(report, decision, cap) {
   hidden <- c(decision$small_count_ids, decision$suppressed_ids)
   eq_ids <- unique(unlist(lapply(report$relations, function(relation) {
     names(relation$coefficients)
@@ -29,6 +25,89 @@ feasible_values_of_small_counts <- function(
     }
   })
   names(dom) <- unknown
+  dom
+}
+
+# Feasible values of each primary-hidden var, given what is printed: an
+# exhaustive depth-first search that, whenever an equation has one unknown
+# left, solves for it instead of enumerating it. It visits every feasible
+# assignment, as the full grid did, without building the grid (which for
+# some cases here exceeds the 16 GB of a CI runner).
+feasible_values_of_small_counts <- function(
+  report,
+  decision,
+  cap = .count_upper_bound(report)
+) {
+  dom <- adversary_domains(report, decision, cap)
+  unknown <- names(dom)
+  relations <- lapply(report$relations, function(relation) relation$coefficients)
+  value_of <- function(id, values) {
+    if (id %in% unknown) values[[id]] else report$counts[[id]]
+  }
+  # Solve every equation left with one unknown, repeatedly; NULL if any
+  # equation fails or a solved value is outside its domain.
+  propagate <- function(values) {
+    repeat {
+      changed <- FALSE
+      for (coef in relations) {
+        ids <- names(coef)
+        open <- ids[ids %in% unknown & !ids %in% names(values)]
+        if (length(open) > 1L) {
+          next
+        }
+        known <- setdiff(ids, open)
+        total <- sum(vapply(known, function(id) coef[[id]] * value_of(id, values), 0))
+        if (!length(open)) {
+          if (total != 0) {
+            return(NULL)
+          }
+          next
+        }
+        v <- -total / coef[[open]]
+        if (v != round(v) || !v %in% dom[[open]]) {
+          return(NULL)
+        }
+        values[[open]] <- v
+        changed <- TRUE
+      }
+      if (!changed) {
+        return(values)
+      }
+    }
+  }
+  small <- intersect(decision$small_count_ids, unknown)
+  seen <- stats::setNames(lapply(small, function(id) integer(0)), small)
+  search <- function(values) {
+    values <- propagate(values)
+    if (is.null(values)) {
+      return(invisible())
+    }
+    rest <- setdiff(unknown, names(values))
+    if (!length(rest)) {
+      for (id in small) {
+        seen[[id]] <<- union(seen[[id]], as.integer(values[[id]]))
+      }
+      return(invisible())
+    }
+    id <- rest[which.min(lengths(dom[rest]))]
+    for (v in dom[[id]]) {
+      search(c(values, stats::setNames(v, id)))
+    }
+  }
+  search(numeric(0))
+  lapply(seen, sort)
+}
+
+# The original full-grid oracle, kept to cross-check the search on cases
+# small enough to enumerate.
+feasible_values_by_grid <- function(
+  report,
+  decision,
+  cap = .count_upper_bound(report)
+) {
+  dom <- adversary_domains(report, decision, cap)
+  unknown <- names(dom)
+  stopifnot(prod(lengths(dom)) <= 2e6)
   grid <- do.call(expand.grid, c(dom, list(KEEP.OUT.ATTRS = FALSE)))
   ok <- rep(TRUE, nrow(grid))
   for (relation in report$relations) {
@@ -49,11 +128,32 @@ feasible_values_of_small_counts <- function(
 expect_no_small_count_recoverable <- function(report) {
   decision <- .decide_which_counts_to_hide(report)
   feas <- feasible_values_of_small_counts(report, decision)
+  dom <- adversary_domains(report, decision, .count_upper_bound(report))
+  if (prod(lengths(dom)) <= 2e6) {
+    expect_equal(
+      feas,
+      feasible_values_by_grid(report, decision),
+      info = "the search and the full grid disagree"
+    )
+  }
   for (id in names(feas)) {
     expect_equal(feas[[id]], 1:4, info = paste("cell", id, "narrowed"))
   }
   decision
 }
+
+test_that("the adversary oracle detects a recoverable small cell", {
+  # Without secondary suppression, c1 = 10 - 7 is exactly recoverable; the
+  # oracle must say so, or every passing test below is vacuous.
+  report <- create_report()
+  record_count(report, "c1", 3)
+  record_count(report, "c2", 7)
+  record_count(report, "T", 10)
+  declare_sum_relation(report, c("c1", "c2"), "T")
+  unsafe <- list(small_count_ids = "c1", suppressed_ids = character(0))
+  expect_equal(feasible_values_of_small_counts(report, unsafe), list(c1 = 3L))
+  expect_equal(feasible_values_by_grid(report, unsafe), list(c1 = 3L))
+})
 
 test_that("primary masking: 1-4 hidden, 0 and >= 5 shown", {
   report <- create_report()
