@@ -60,7 +60,9 @@ friction goes to `workflow-feedback.md`, not the decision log.
   Objects are nouns, functions are verbs: a constructor is `create_report()`, never
   `report_new()` or a `noun_verb()` family prefix.
 - **PHI:** never in code, tests, examples, or fixtures.
-- **CI:** only R-CMD-check runs on every push and PR. pkgdown and test-coverage run only on
+- **CI:** only R-CMD-check runs on every push and PR (macOS, Windows, ubuntu release and
+  oldrel-1). Its R-devel job runs weekly (Mondays 06:00 UTC) and by hand, since R-devel
+  builds every dependency from source. pkgdown and test-coverage run only on
   major-version releases (tags `vX.0.0`) or by hand (`workflow_dispatch`).
 - **Worktrees, not in-place branch switching.** Do each change in an isolated worktree:
   prefer the harness's native tool (`EnterWorktree`) over `git worktree add`, which creates

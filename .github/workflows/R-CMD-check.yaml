@@ -3,6 +3,11 @@ on:
   push:
     branches: [main, master]
   pull_request:
+  # R-devel builds every dependency from source (arrow alone can take 20-40
+  # min), so it runs weekly and by hand, not on every push and PR.
+  schedule:
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
 
 name: R-CMD-check.yaml
 
@@ -10,6 +15,7 @@ permissions: read-all
 
 jobs:
   R-CMD-check:
+    if: github.event_name != 'schedule'
     runs-on: ${{ matrix.config.os }}
     name: ${{ matrix.config.os }} (${{ matrix.config.r }})
     strategy:
@@ -18,7 +24,6 @@ jobs:
         config:
           - {os: macos-latest,   r: 'release'}
           - {os: windows-latest, r: 'release'}
-          - {os: ubuntu-latest,  r: 'devel', http-user-agent: 'release'}
           - {os: ubuntu-latest,  r: 'release'}
           - {os: ubuntu-latest,  r: 'oldrel-1'}
     env:
@@ -33,6 +38,34 @@ jobs:
         with:
           r-version: ${{ matrix.config.r }}
           http-user-agent: ${{ matrix.config.http-user-agent }}
+          use-public-rspm: true
+
+      - uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          extra-packages: any::rcmdcheck
+          needs: check
+
+      - uses: r-lib/actions/check-r-package@v2
+        with:
+          upload-snapshots: true
+          build_args: 'c("--no-manual","--compact-vignettes=gs+qpdf")'
+
+  R-devel:
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    name: ubuntu-latest (devel)
+    env:
+      GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
+      R_KEEP_PKG_SOURCE: yes
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: r-lib/actions/setup-pandoc@v2
+
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: devel
+          http-user-agent: release
           use-public-rspm: true
 
       - uses: r-lib/actions/setup-r-dependencies@v2
