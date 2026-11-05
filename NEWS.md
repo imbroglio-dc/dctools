@@ -1,4 +1,7 @@
-# dctools (development version)
+# dctools 0.1.0
+
+First release: the first verifier pin for analysis projects (the run ledger,
+audit, evidence export and disclosure-safe runner below).
 
 * `run_targets_safe()` brackets its output with
   `== dctools runner output schema 1 ==` and `== end of runner output ==`, so a
