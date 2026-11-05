@@ -1,0 +1,34 @@
+version: 1
+apps:
+  support: imbroglio-dc-support
+  critique: imbroglio-dc-critique
+required_checks:
+- ownership
+frozen:
+  always:
+  - R/audit.R
+  - R/audit-render.R
+  - R/environment.R
+  - R/export.R
+  - R/git.R
+  - R/ledger.R
+  - R/output-schema.R
+  - R/pipeline.R
+  - R/provenance.R
+  - R/report.R
+  - R/report-suppression.R
+  - R/stamp.R
+  - tests/testthat/helper-ledger-fixture.R
+  - tests/testthat/helper-report.R
+  - tests/testthat/helper-subprocess.R
+  - tests/testthat/_snaps/audit-render.md
+  - tests/testthat/test-audit-*.R
+  - tests/testthat/test-bare-numbers.R
+  - tests/testthat/test-environment.R
+  - tests/testthat/test-export.R
+  - tests/testthat/test-ledger*.R
+  - tests/testthat/test-output-schema.R
+  - tests/testthat/test-pipeline-*.R
+  - tests/testthat/test-provenance.R
+  - tests/testthat/test-report*.R
+  - tests/testthat/test-stamp.R
