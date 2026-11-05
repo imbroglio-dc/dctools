@@ -61,7 +61,8 @@ with a ledger, the audit passed), \code{1L} when a target errored, \code{2L} whe
 the runner itself failed, \code{3L} when no target errored but the audit's
 verdict was not \code{PASS}. When several apply the order of precedence is
 \code{2L} (including a ledger or audit failure after the run), then \code{1L},
-then \code{3L}. On a runner failure stdout gets only
+then \code{3L}. On a runner failure stdout gets, between the markers, only
+what had been formatted before the failure and
 \verb{runner failed: <condition class>}, with the detail in \code{runner.log} when
 the debug directory could be made.
 }
@@ -82,8 +83,9 @@ identifier-named counts (values from 1 to \code{mask_below - 1} shown as
 }
 }
 \details{
-Detail goes to \code{runner.log} (the runner's own messages, warnings and errors)
-and \code{tar_make.log} (the pipeline process's output) in the debug directory,
+Detail goes to \code{runner.log} (the runner's own messages, warnings and errors),
+\code{stdout.log} (anything else printed in the runner's process) and
+\code{tar_make.log} (the pipeline process's output) in the debug directory,
 next to the bundles \code{\link[=capture_target_debug]{capture_target_debug()}} writes. Only the newest \code{keep}
 run directories are kept.
 
@@ -106,10 +108,19 @@ identifier allowlisted and the value an integer (masked below
 \item a final \verb{withheld:} line counts what was held back.
 If the manifest cannot be read, the allowlist is empty and every target
 line is withheld. The schema is only as safe as the committed source: a
-restricted value written into the code would be allowlisted. Output that R
-or the project prints before \code{run_targets_safe()} starts (an \code{.Rprofile},
-package startup messages) is outside the runner's reach.
+restricted value written into the code would be allowlisted.
 }
+
+\strong{Markers.} The runner's output lies between
+\verb{== dctools runner output schema 1 ==} (its first line) and
+\verb{== end of runner output ==} (its last). Output that R or the project
+prints before the first (R startup, renv, an \code{.Rprofile}, package loading)
+or after the last (R's exit-time warnings) is outside the runner's reach;
+a wrapper that passes only the lines between the markers, and sends
+stderr and everything else to a private log, closes that gap. While the
+runner works, anything printed in its own process (a \code{format_status}
+function's \code{print()}, a package's \code{cat()}) goes to \code{stdout.log} in the
+debug directory; the summary is printed after.
 
 A project calls this from a small script, so it can be run as one command
 and exit with the status:

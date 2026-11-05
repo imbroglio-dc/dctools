@@ -746,8 +746,9 @@ read_debug_status <- function(debug_dir, target_name) {
 #' * `== run status ==`: the lines of each finished `status_targets` target;
 #' * the debug directory's path.
 #'
-#' Detail goes to `runner.log` (the runner's own messages, warnings and errors)
-#' and `tar_make.log` (the pipeline process's output) in the debug directory,
+#' Detail goes to `runner.log` (the runner's own messages, warnings and errors),
+#' `stdout.log` (anything else printed in the runner's process) and
+#' `tar_make.log` (the pipeline process's output) in the debug directory,
 #' next to the bundles [capture_target_debug()] writes. Only the newest `keep`
 #' run directories are kept.
 #'
@@ -769,9 +770,18 @@ read_debug_status <- function(debug_dir, target_name) {
 #' * a final `withheld:` line counts what was held back.
 #' If the manifest cannot be read, the allowlist is empty and every target
 #' line is withheld. The schema is only as safe as the committed source: a
-#' restricted value written into the code would be allowlisted. Output that R
-#' or the project prints before `run_targets_safe()` starts (an `.Rprofile`,
-#' package startup messages) is outside the runner's reach.
+#' restricted value written into the code would be allowlisted.
+#'
+#' **Markers.** The runner's output lies between
+#' `== dctools runner output schema 1 ==` (its first line) and
+#' `== end of runner output ==` (its last). Output that R or the project
+#' prints before the first (R startup, renv, an `.Rprofile`, package loading)
+#' or after the last (R's exit-time warnings) is outside the runner's reach;
+#' a wrapper that passes only the lines between the markers, and sends
+#' stderr and everything else to a private log, closes that gap. While the
+#' runner works, anything printed in its own process (a `format_status`
+#' function's `print()`, a package's `cat()`) goes to `stdout.log` in the
+#' debug directory; the summary is printed after.
 #'
 #' A project calls this from a small script, so it can be run as one command
 #' and exit with the status:
@@ -819,7 +829,8 @@ read_debug_status <- function(debug_dir, target_name) {
 #'   the runner itself failed, `3L` when no target errored but the audit's
 #'   verdict was not `PASS`. When several apply the order of precedence is
 #'   `2L` (including a ledger or audit failure after the run), then `1L`,
-#'   then `3L`. On a runner failure stdout gets only
+#'   then `3L`. On a runner failure stdout gets, between the markers, only
+#'   what had been formatted before the failure and
 #'   `runner failed: <condition class>`, with the detail in `runner.log` when
 #'   the debug directory could be made.
 #' @seealso [capture_target_debug()], [abort_safe()].
@@ -841,6 +852,9 @@ run_targets_safe <- function(
   ledger = NULL
 ) {
   state <- new.env()
+  state$out <- character(0)
+  cat(.runner_begin_line(), "\n", sep = "")
+  on.exit(cat(.runner_end_line, "\n", sep = ""), add = TRUE)
   tryCatch(
     .run_targets_safe(
       state,
@@ -874,10 +888,44 @@ run_targets_safe <- function(
       if (!grepl(.safe_name_pattern, cls)) {
         cls <- "error"
       }
+      # What was formatted before the failure is still printed, then the class.
+      writeLines(state$out)
       cat("runner failed: ", cls, "\n", sep = "")
       invisible(2L)
     }
   )
+}
+
+# The runner's stdout lies between these two lines. Output before the first
+# (R startup, renv, an .Rprofile, package loading) and after the second (R's
+# exit-time warnings) is not the runner's, so a wrapper can drop it.
+.runner_begin_line <- function() {
+  sprintf("== dctools runner output schema %d ==", .output_schema_version)
+}
+.runner_end_line <- "== end of runner output =="
+
+# While the runner works, anything printed in this process (a status
+# formatter's print(), a package's cat()) goes to stdout.log in the debug
+# directory; the summary is printed only after the sink is removed.
+.sink_stdout <- function(path, state) {
+  depth <- sink.number()
+  con <- file(path, open = "at")
+  sink(con, type = "output")
+  state$sink_depth <- depth
+  state$sink_con <- con
+}
+
+.unsink_stdout <- function(state) {
+  if (is.null(state$sink_depth)) {
+    return(invisible())
+  }
+  while (sink.number() > state$sink_depth) {
+    sink(type = "output")
+  }
+  close(state$sink_con)
+  state$sink_depth <- NULL
+  state$sink_con <- NULL
+  invisible()
 }
 
 .run_targets_safe <- function(
@@ -909,6 +957,8 @@ run_targets_safe <- function(
   log_line <- function(...) {
     cat(..., "\n", file = state$log, append = TRUE, sep = "")
   }
+  .sink_stdout(file.path(debug_dir, "stdout.log"), state)
+  on.exit(.unsink_stdout(state), add = TRUE)
   .require_pkgs(c("targets", "tidyselect", "jsonlite"), "run_targets_safe")
   selected <- .parse_runner_args(args)
   status_targets <- .check_status_targets(status_targets)
@@ -1045,7 +1095,7 @@ run_targets_safe <- function(
         parents = .branch_parents(targets::tar_config_get("store")),
         withheld = length(attr(status_lines, "withheld"))
       )
-      cat(out, sep = "\n")
+      state$out <- out
       status <- if (!made || any(progress$progress == "errored")) 1L else 0L
       if (!is.null(ledger)) {
         ledger_file <- write_run_ledger(
@@ -1064,12 +1114,15 @@ run_targets_safe <- function(
           env_packages = ledger$env_packages
         )
         audit <- audit_run(ledger_file)
-        cat(.format_audit_summary(audit, ledger_file), sep = "\n")
+        state$out <- c(state$out, .format_audit_summary(audit, ledger_file))
         if (status == 0L && !identical(attr(audit, "verdict"), "PASS")) {
           status <- 3L
         }
       }
       .prune_debug_runs(debug_root, keep = keep)
+      .unsink_stdout(state)
+      writeLines(state$out)
+      state$out <- character(0)
       invisible(status)
     },
     warning = function(w) {

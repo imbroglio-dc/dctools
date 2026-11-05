@@ -1,5 +1,11 @@
 # dctools (development version)
 
+* `run_targets_safe()` brackets its output with
+  `== dctools runner output schema 1 ==` and `== end of runner output ==`, so a
+  wrapper can drop what R, renv, an `.Rprofile` or package loading print
+  before the runner starts, and R's exit-time warnings after it. While the
+  runner works, anything printed in its own process goes to `stdout.log` in
+  the debug directory; the summary is printed after.
 * `export_run_evidence()` writes the committable copy of a run's evidence
   (`ledger.json`, `audit.md`, `provenance.md`; export schema version 1).
   The copy is built field by field, so unknown fields are dropped. Targets,
