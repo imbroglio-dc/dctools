@@ -255,7 +255,7 @@ make_toy_project <- function(env = parent.frame()) {
 }
 
 # stdout/stderr with "\r\n" (Windows) normalized to "\n".
-run_shim <- function(proj, args = character(0), fail = FALSE) {
+run_shim <- function(proj, args = character(0), fail = FALSE, env = character(0)) {
   res <- processx::run(
     file.path(R.home("bin"), "Rscript"),
     c("code/pipeline/run_pipeline_safe.R", args),
@@ -265,7 +265,8 @@ run_shim <- function(proj, args = character(0), fail = FALSE) {
       "current",
       DCTOOLS_TEST_SRC = dctools_src(),
       TOY_FAIL = if (fail) "1" else "0",
-      R_LIBS = paste(.libPaths(), collapse = .Platform$path.sep)
+      R_LIBS = paste(.libPaths(), collapse = .Platform$path.sep),
+      env
     )
   )
   res$stdout <- gsub("\r\n", "\n", res$stdout, fixed = TRUE)
@@ -375,7 +376,8 @@ test_that("the runner's output lies between its markers; startup noise and stray
   skip_end_to_end()
   proj <- make_toy_project()
   writeLines("cat('startup EARLY-5\\n')", file.path(proj, ".Rprofile"))
-  res <- run_shim(proj)
+  # Named explicitly: under R CMD check the child would not read a project .Rprofile.
+  res <- run_shim(proj, env = c(R_PROFILE_USER = file.path(proj, ".Rprofile")))
   expect_identical(res$status, 0L, info = res$stdout)
   lines <- strsplit(res$stdout, "\n")[[1]]
   begin <- match("== dctools runner output schema 1 ==", lines)
