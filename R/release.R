@@ -366,6 +366,24 @@ allocate_release_id <- function(date = Sys.Date()) {
   files[files != "manifest.json"]
 }
 
+# The manifest, written last: every bundle file but itself, with its SHA-256.
+.write_manifest <- function(bundle_rel, release_id, run_id, analysis_commit, requirements, unresolved) {
+  files <- .bundle_files(bundle_rel)
+  manifest <- list(
+    manifest_schema_version = .manifest_schema_version,
+    release_id = release_id,
+    run_id = run_id,
+    analysis_commit = analysis_commit,
+    # As git stores them at A (byte for byte on every platform).
+    requirements_sha256 = .git_blob_sha256(".", analysis_commit, requirements),
+    unresolved_sha256 = .git_blob_sha256(".", analysis_commit, unresolved),
+    artifacts = lapply(files, function(f) list(path = f, sha256 = .sha256_file(file.path(bundle_rel, f))))
+  )
+  path <- file.path(bundle_rel, "manifest.json")
+  .write_json_file(manifest, path)
+  path
+}
+
 #' Build a release candidate bundle
 #'
 #' Writes `evidence/releases/<release_id>/` for the release candidate run
@@ -456,6 +474,9 @@ build_release_bundle <- function(
   audit <- audit_run(ledger_path, store = store, script = script, repo = repo)
 
   dir.create(bundle_rel, recursive = TRUE)
+  # git keeps the bundle's bytes as written (no line-ending conversion), so
+  # the manifest's digests hold for the committed blobs on every platform.
+  writeChar("* -text\n", file.path(bundle_rel, ".gitattributes"), eos = NULL, useBytes = TRUE)
   export_run_evidence(ledger_path, file.path(bundle_rel, "run"), result = audit, store = store, script = script, repo = repo)
   deliverables <- as.character(unlist(reqs$data$deliverables))
   missing <- deliverables[!file.exists(deliverables)]
@@ -473,18 +494,7 @@ build_release_bundle <- function(
   .write_json_file(c(list(release_id = release_id), checklist), file.path(bundle_rel, "checklist.json"))
   writeLines(.checklist_md(checklist, release_id), file.path(bundle_rel, "checklist.md"), useBytes = TRUE)
 
-  files <- .bundle_files(bundle_rel)
-  manifest <- list(
-    manifest_schema_version = .manifest_schema_version,
-    release_id = release_id,
-    run_id = .as_chr(ledger$run$run_id),
-    analysis_commit = head,
-    requirements_sha256 = .sha256_file(requirements),
-    unresolved_sha256 = .sha256_file(unresolved),
-    artifacts = lapply(files, function(f) list(path = f, sha256 = .sha256_file(file.path(bundle_rel, f))))
-  )
-  manifest_path <- file.path(bundle_rel, "manifest.json")
-  .write_json_file(manifest, manifest_path)
+  manifest_path <- .write_manifest(bundle_rel, release_id, .as_chr(ledger$run$run_id), head, requirements, unresolved)
   digest <- .sha256_file(manifest_path)
   invisible(list(
     dir = bundle_rel,

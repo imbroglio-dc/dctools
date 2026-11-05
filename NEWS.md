@@ -1,5 +1,20 @@
 # dctools (development version)
 
+* Release kit, part 2 (P9b): `verify_release()` and `verify_release_pr()`
+  check a release PR: V1 the bundle at E matches the manifest byte for
+  byte; V2 A is an ancestor of E, with no merges and only bundle changes
+  between them, and the requirements and inventory at A match the
+  manifest; V3 the release approver's latest decisive review approves E and
+  its `release-approval` block names the release and the manifest digest;
+  V4 no nonwaivable blocker, and every waivable one accepted with a
+  rationale. `release_approval_template()` writes the PR comment (waivable
+  blockers commented out, so nothing is accepted by default).
+  `archive_release_approval()` writes the binding review verbatim to
+  `evidence/approvals/<release ID>.json`, and `check_approval_archive()`
+  flags a review edited or dismissed since. Bundles now carry a
+  `.gitattributes` (`* -text`), and the manifest's requirements and
+  inventory digests come from git, so digests hold on every platform.
+
 * Release kit, part 1 (P9a): `allocate_release_id()` and
   `build_release_bundle()`. The bundle (`evidence/releases/<release ID>/`)
   holds the release run's exported evidence, receipts computed by dctools
