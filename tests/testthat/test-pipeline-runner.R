@@ -255,7 +255,7 @@ make_toy_project <- function(env = parent.frame()) {
 }
 
 # stdout/stderr with "\r\n" (Windows) normalized to "\n".
-run_shim <- function(proj, args = character(0), fail = FALSE, env = character(0)) {
+run_shim <- function(proj, args = character(0), fail = FALSE) {
   res <- processx::run(
     file.path(R.home("bin"), "Rscript"),
     c("code/pipeline/run_pipeline_safe.R", args),
@@ -265,8 +265,7 @@ run_shim <- function(proj, args = character(0), fail = FALSE, env = character(0)
       "current",
       DCTOOLS_TEST_SRC = dctools_src(),
       TOY_FAIL = if (fail) "1" else "0",
-      R_LIBS = paste(.libPaths(), collapse = .Platform$path.sep),
-      env
+      R_LIBS = paste(.libPaths(), collapse = .Platform$path.sep)
     )
   )
   res$stdout <- gsub("\r\n", "\n", res$stdout, fixed = TRUE)
@@ -375,14 +374,16 @@ test_that("bad arguments through the shim exit 2 and print only the class", {
 test_that("the runner's output lies between its markers; startup noise and stray prints do not", {
   skip_end_to_end()
   proj <- make_toy_project()
-  writeLines("cat('startup EARLY-5\\n')", file.path(proj, ".Rprofile"))
-  # Named explicitly: under R CMD check the child would not read a project .Rprofile.
-  res <- run_shim(proj, env = c(R_PROFILE_USER = file.path(proj, ".Rprofile")))
+  # Stands in for R startup, renv or an .Rprofile: printed before the runner starts.
+  # (A real .Rprofile is not read by the child under R CMD check on every platform.)
+  shim <- file.path(proj, "code", "pipeline", "run_pipeline_safe.R")
+  writeLines(c("cat('startup EARLY-5\\n')", readLines(shim)), shim)
+  res <- run_shim(proj)
   expect_identical(res$status, 0L, info = res$stdout)
   lines <- strsplit(res$stdout, "\n")[[1]]
   begin <- match("== dctools runner output schema 1 ==", lines)
   expect_false(is.na(begin), info = res$stdout)
-  # The .Rprofile line comes first: a wrapper drops everything before `begin`.
+  # The startup line comes first: a wrapper drops everything before `begin`.
   expect_identical(lines[seq_len(begin - 1L)], "startup EARLY-5")
   expect_identical(lines[length(lines)], "== end of runner output ==")
   inside <- lines[seq(begin, length(lines))]
