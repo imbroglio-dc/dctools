@@ -1,5 +1,16 @@
 # dctools (development version)
 
+* `run_targets_safe()` applies a closed output schema (version 1, recorded
+  in the ledger as `run$output_schema_version`). Printed strings must come
+  from an allowlist built from the committed source (target names from
+  `tar_manifest()`, symbols and identifier-shaped words of string constants
+  in the project's R files). Dynamic branches, whose names hash their data,
+  print only as `<pattern>: <n> branches <progress>` with the count masked.
+  Sidecar targets, codes and count names outside the allowlist are withheld.
+  `== run status ==` lines must read `<identifier>: <value>`, with integers
+  masked below `mask_below`; other lines are replaced by a placeholder and
+  logged privately, and a `withheld:` line counts them. An unreadable
+  manifest withholds every target line.
 * Run ledger schema 2. `capture_environment()` records the computational
   tier (R, BLAS/LAPACK, RNG kind, collation locale, thread settings, and
   versions plus `RemoteSha` of named packages) and the full tier (OS and

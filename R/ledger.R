@@ -307,18 +307,22 @@
 
 # Run before tar_make(): the declared inputs, the literal paths of file
 # targets, and everything under the input directories.
+.read_manifest <- function(script, callr_arguments = list(show = FALSE)) {
+  as.data.frame(targets::tar_manifest(
+    fields = c("name", "command", "format"),
+    script = script,
+    callr_arguments = callr_arguments
+  ))
+}
+
 .inputs_before <- function(
   script,
   extra_inputs = character(0),
   documents = character(0),
   input_dirs = character(0),
-  callr_arguments = list(show = FALSE)
+  callr_arguments = list(show = FALSE),
+  manifest = .read_manifest(script, callr_arguments)
 ) {
-  manifest <- as.data.frame(targets::tar_manifest(
-    fields = c("name", "command", "format"),
-    script = script,
-    callr_arguments = callr_arguments
-  ))
   files <- manifest[!is.na(manifest$format) & manifest$format == "file", ]
   literal <- unlist(lapply(files$command, .literal_paths))
   paths <- unique(c(extra_inputs, documents, literal, .files_under(input_dirs)))
@@ -608,6 +612,7 @@ write_run_ledger <- function(
     schema_version = 2L,
     run = list(
       run_id = run_id,
+      output_schema_version = .output_schema_version,
       written = format(Sys.time(), "%Y-%m-%d %H:%M:%S %Z"),
       requested = I(requested),
       exit_code = as.integer(exit_code)
