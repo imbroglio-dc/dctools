@@ -1,5 +1,15 @@
 # dctools (development version)
 
+* Release kit, part 3 (P9c): controlled insertion. `show_count()` inserts a
+  report's count into a Quarto document exactly as the report masks it
+  (masking recomputed by dctools), inside a span naming the target, count id
+  and display rule, so the rendered HTML carries its own insertion records.
+  `check_rendered_values()` checks every span against the stored reports
+  and flags any number in the visible text printed another way (exemptions
+  explicit; years by default). `build_release_bundle()` now computes
+  `render_checked` from it for each deliverable and writes the insertion
+  records under `render/`; non-HTML deliverables are `not_established`.
+
 * Release kit, part 2 (P9b): `verify_release()` and `verify_release_pr()`
   check a release PR: V1 the bundle at E matches the manifest byte for
   byte; V2 A is an ancestor of E, with no merges and only bundle changes

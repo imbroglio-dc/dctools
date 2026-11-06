@@ -20,7 +20,7 @@ release_requirements <- function(...) {
     checks = Filter(Negate(is.null), checks),
     not_applicable_reasons = list(diagnostics_checked = "No model is fitted."),
     known_answer_tests = list("tests/known"),
-    deliverables = list("output/record.html")
+    deliverables = list("output/flow.html")
   )
 }
 
@@ -73,6 +73,14 @@ release_fixture <- function(requirements = release_requirements(), items = list(
     input_dirs = "data/raw",
     env_packages = "jsonlite"
   ))
+  # The deliverable, with its values inserted through show_count().
+  evidence <- targets::tar_read_raw("evidence", store = file.path(proj, "_targets"))
+  writeLines(c(
+    "<html><head><title>Counts</title></head><body><h1>Counts</h1>",
+    paste0("<p>Values: ", show_count(evidence, "n_values", format = "html"), "; large: ",
+           show_count(evidence, "n_large", format = "html"), ".</p>"),
+    "</body></html>"
+  ), file.path(proj, "output", "flow.html"))
   proj
 }
 
@@ -115,7 +123,7 @@ test_that("a clean candidate gives passing receipts, no blockers and a manifest 
     outcomes[c("contract_checked", "execution_recorded", "known_answer_checked", "render_checked",
                "reproduced", "disclosure_approved")],
     c(contract_checked = "pass", execution_recorded = "pass", known_answer_checked = "pass",
-      render_checked = "not_established", reproduced = "not_run", disclosure_approved = "not_run")
+      render_checked = "pass", reproduced = "not_run", disclosure_approved = "not_run")
   )
   expect_identical(blocker_ids(proj), character(0))
   expect_identical(out$n_blockers, 0L)
@@ -128,7 +136,9 @@ test_that("a clean candidate gives passing receipts, no blockers and a manifest 
   for (a in manifest$artifacts) {
     expect_identical(a$sha256, digest::digest(file = file.path(dir, a$path), algo = "sha256"), info = a$path)
   }
-  expect_true("deliverables/output/record.html" %in% files)
+  expect_true(all(c("deliverables/output/flow.html", "render/output/flow.html.insertions.json") %in% files))
+  ins <- bundle_json(proj, "render/output/flow.html.insertions.json")$insertions
+  expect_identical(vapply(ins, `[[`, "", "id"), c("n_values", "n_large"))
   expect_true(all(c("run/ledger.json", "run/audit.md", "receipts.json", "checklist.md", ".gitattributes") %in% files))
   # The digest is of the blob git committed at A (on Windows the working-tree
   # copy may have CRLF line endings).
@@ -182,7 +192,7 @@ test_that("missing requirements, a missing deliverable and failed input checks a
   skip_if_not_installed("yaml")
   local_engine()
   reqs <- release_requirements(reproduced = NULL)
-  reqs$deliverables <- list("output/record.html", "output/missing.html")
+  reqs$deliverables <- list("output/flow.html", "output/missing.html")
   reqs$checks$diagnostics_checked <- "not_applicable"
   reqs$not_applicable_reasons <- list()
   proj <- release_fixture(requirements = reqs)

@@ -178,7 +178,37 @@ allocate_release_id <- function(date = Sys.Date()) {
   .receipt("known_answer_checked", outcome, reason)
 }
 
-.release_receipts <- function(audit, lock, requirements, repo, script) {
+# The render check for each declared deliverable, with its insertion records
+# written into the bundle under render/.
+.render_receipt <- function(deliverables, reports, exempt, bundle_rel) {
+  if (!length(deliverables)) {
+    return(.receipt("render_checked", "not_run", "no deliverables declared"))
+  }
+  outcomes <- character(0)
+  problems <- character(0)
+  evidence <- character(0)
+  for (d in deliverables) {
+    res <- check_rendered_values(d, reports, exempt = exempt)
+    outcomes <- c(outcomes, res$outcome)
+    problems <- c(problems, if (length(res$problems)) paste0(d, ": ", res$problems))
+    if (identical(res$outcome, "not_established")) {
+      problems <- c(problems, paste0(d, ": not an HTML document, so its values cannot be checked"))
+    }
+    rel <- file.path("render", paste0(d, ".insertions.json"))
+    out <- file.path(bundle_rel, rel)
+    dir.create(dirname(out), recursive = TRUE, showWarnings = FALSE)
+    .write_json_file(list(deliverable = d, outcome = res$outcome, insertions = res$insertions), out)
+    evidence <- c(evidence, rel)
+  }
+  outcome <- if (any(outcomes == "fail")) "fail" else if (all(outcomes == "pass")) "pass" else "not_established"
+  reason <- if (length(problems)) paste(utils::head(problems, 10L), collapse = "; ") else NULL
+  if (length(problems) > 10L) {
+    reason <- paste0(reason, sprintf("; and %d more", length(problems) - 10L))
+  }
+  .receipt("render_checked", outcome, reason, evidence)
+}
+
+.release_receipts <- function(audit, lock, requirements, repo, script, render) {
   verdict <- attr(audit, "verdict")
   execution <- switch(
     verdict,
@@ -210,7 +240,7 @@ allocate_release_id <- function(date = Sys.Date()) {
     contract,
     execution,
     .receipt("extraction_rechecked", "not_established", "no supported extraction check in this dctools version"),
-    .receipt("render_checked", "not_established", "no insertion records in this dctools version"),
+    render,
     .receipt("reproduced", "not_run", "no identified prior run"),
     .receipt("disclosure_approved", "not_run", "decided in the release approval"),
     known,
@@ -395,8 +425,11 @@ allocate_release_id <- function(date = Sys.Date()) {
 #' [audit_run()] on the run's ledger, `contract_checked` from
 #' [check_computation_lock()], `known_answer_checked` from
 #' `testthat::test_dir()` on each `known_answer_tests` directory (in a
-#' separate R process). `extraction_rechecked`, `render_checked` and
-#' `diagnostics_checked` are `not_established` in this version,
+#' separate R process), `render_checked` from [check_rendered_values()] on
+#' each deliverable against the run's reportable reports (insertion records
+#' under `render/`; exemptions from `render_exemptions`, by default years).
+#' `extraction_rechecked` and `diagnostics_checked` are `not_established` in
+#' this version,
 #' `reproduced` is `not_run` (no identified prior run), and
 #' `disclosure_approved` is `not_run` because the release approval decides it.
 #'
@@ -485,7 +518,18 @@ build_release_bundle <- function(
     dir.create(dirname(to), recursive = TRUE, showWarnings = FALSE)
     file.copy(d, to, copy.date = FALSE)
   }
-  receipts <- .release_receipts(audit, lock, reqs$data, repo, script)
+  reportable <- vapply(ledger$reportable, function(r) .as_chr(r$name), "")
+  exempt <- as.character(unlist(reqs$data$render_exemptions))
+  if (!length(exempt)) {
+    exempt <- .default_exemptions
+  }
+  render <- .render_receipt(
+    setdiff(deliverables, missing),
+    .load_reportable(store, reportable),
+    exempt,
+    bundle_rel
+  )
+  receipts <- .release_receipts(audit, lock, reqs$data, repo, script, render)
   .write_json_file(
     list(receipts_schema_version = .receipts_schema_version, release_id = release_id, receipts = receipts),
     file.path(bundle_rel, "receipts.json")
