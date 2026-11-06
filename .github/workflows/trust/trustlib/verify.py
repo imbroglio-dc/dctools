@@ -15,6 +15,8 @@ MAIN = "trust:main"
 TAGS_CREATE = "trust:gate-tags-create"
 TAGS_LOCK = "trust:gate-tags-lock"
 NAMES = (MAIN, TAGS_CREATE, TAGS_LOCK)
+MERGE_METHODS = ("merge",)
+ALL_MERGE_METHODS = ("merge", "squash", "rebase")   # GitHub's default when a ruleset names none
 MANIFEST = "MANIFEST.json"
 MANIFEST_PATH = f".github/workflows/trust/{MANIFEST}"
 
@@ -34,7 +36,10 @@ def desired_rulesets(config):
                 {"type": "pull_request", "parameters": {
                     "required_approving_review_count": 0, "dismiss_stale_reviews_on_push": False,
                     "require_code_owner_review": False, "require_last_push_approval": False,
-                    "required_review_thread_resolution": False}},
+                    "required_review_thread_resolution": False,
+                    # Merge commits only (spec §11.2): squash and rebase make commits nobody approved and
+                    # leave the approved ones off main's history.
+                    "allowed_merge_methods": list(MERGE_METHODS)}},
                 {"type": "required_status_checks", "parameters": {
                     "strict_required_status_checks_policy": False, "required_status_checks": checks}},
             ],
@@ -78,6 +83,12 @@ def diff_ruleset(want, have, strict=False):
     for rule in want["rules"]:
         if rule["type"] not in live_rules:
             problems.append(f"{name}: rule {rule['type']} is missing")
+        elif rule["type"] == "pull_request" and "allowed_merge_methods" in rule["parameters"]:
+            live = live_rules["pull_request"].get("allowed_merge_methods")
+            live = ALL_MERGE_METHODS if not live else live
+            extra = sorted(set(live) - set(rule["parameters"]["allowed_merge_methods"]))
+            if extra:
+                problems.append(f"{name}: allows {', '.join(extra)} merges; only merge commits are allowed")
         elif rule["type"] == "required_status_checks":
             live = {(c.get("context"), c.get("integration_id"))
                     for c in live_rules[rule["type"]].get("required_status_checks") or []}

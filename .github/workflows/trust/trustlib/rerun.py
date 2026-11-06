@@ -30,9 +30,17 @@ from .github import GitHub, GitHubError
 
 WORKFLOW = "ownership.yml"
 TITLE = "::error title=rerun-ownership::"
+# The required checks rerun on a review: the workflow, the event its runs come from, and the check's name. The
+# `release` check (release.yml) runs on `pull_request` because it runs the project's R code, which must not run
+# with a `pull_request_target` token; its review job reruns its runs the same way.
+CHECKS = {
+    "ownership": ("ownership.yml", "pull_request_target"),
+    "release": ("release.yml", "pull_request"),
+}
 
 
-def main(environ=None, client=GitHub, sleep=time.sleep, clock=time.monotonic, timeout=600, poll=10):
+def main(environ=None, client=GitHub, sleep=time.sleep, clock=time.monotonic, timeout=600, poll=10,
+         check="ownership"):
     """0 once every `ownership` run on the head has been rerun; 1 when there is none or GitHub refused any
     rerun (the others are still rerun). Any other error propagates and the job shows red, with the earlier
     verdicts standing (see the module docstring)."""
@@ -41,17 +49,21 @@ def main(environ=None, client=GitHub, sleep=time.sleep, clock=time.monotonic, ti
         event = json.load(handle)
     repo = event["repository"]["full_name"]
     sha = event["pull_request"]["head"]["sha"]
-    return rerun_head(client(environ["GH_TOKEN"]), repo, sha, sleep=sleep, clock=clock, timeout=timeout, poll=poll)
+    check = environ.get("TRUST_RERUN_CHECK", check)
+    workflow, event = CHECKS[check]
+    return rerun_head(client(environ["GH_TOKEN"]), repo, sha, sleep=sleep, clock=clock, timeout=timeout, poll=poll,
+                      workflow=workflow, event=event, name=check,
+                      title=TITLE if check == "ownership" else f"::error title=rerun-{check}::")
 
 
 def rerun_head(gh, repo, sha, *, sleep=time.sleep, clock=time.monotonic, timeout=600, poll=10, out=print,
-               title=TITLE):
+               title=TITLE, workflow=WORKFLOW, event="pull_request_target", name="ownership"):
     """Rerun every `ownership` run on `sha` once all have finished: 0 when each was rerun, 1 otherwise. The review
     job's body; `biostat-trust tag` calls it for each open PR after a gate tag lands (spec §11, gate-tag timing)."""
-    listed = gh.paginate(f"/repos/{repo}/actions/workflows/{WORKFLOW}/runs",
-                         {"event": "pull_request_target", "head_sha": sha}, key="workflow_runs")
+    listed = gh.paginate(f"/repos/{repo}/actions/workflows/{workflow}/runs",
+                         {"event": event, "head_sha": sha}, key="workflow_runs")
     if not listed:
-        out(f"{title}no ownership run on {sha[:7]}; close and reopen the PR to start one")
+        out(f"{title}no {name} run on {sha[:7]}; close and reopen the PR to start one")
         return 1
     runs = {run["id"]: run for run in listed}   # GitHub documents no order, so the ids set it
     deadline = clock() + timeout
@@ -61,7 +73,7 @@ def rerun_head(gh, repo, sha, *, sleep=time.sleep, clock=time.monotonic, timeout
         if not going:
             break
         if clock() >= deadline:
-            out(f"{title}ownership run {going[0]} is still running after {timeout}s; "
+            out(f"{title}{name} run {going[0]} is still running after {timeout}s; "
                   "rerun it from the Actions tab once it finishes")
             return 1
         sleep(poll)
@@ -75,13 +87,13 @@ def rerun_head(gh, repo, sha, *, sleep=time.sleep, clock=time.monotonic, timeout
         try:
             gh.post(f"/repos/{repo}/actions/runs/{i}/rerun")
         except GitHubError as err:   # GitHub refuses runs older than 30 days
-            out(f"{title}GitHub refused to rerun ownership run {i} (HTTP {err.status}); "
+            out(f"{title}GitHub refused to rerun {name} run {i} (HTTP {err.status}); "
                   "rerun it from the Actions tab, or push a new commit to the PR (Update branch)")
             refused = True
         else:
             done.append(str(i))
     if done:
-        out(f"reran ownership runs {', '.join(done)} on {sha[:7]}")
+        out(f"reran {name} runs {', '.join(done)} on {sha[:7]}")
     return 1 if refused else 0
 
 
