@@ -1,5 +1,19 @@
 # dctools (development version)
 
+* Release kit, part 1 (P9a): `allocate_release_id()` and
+  `build_release_bundle()`. The bundle (`evidence/releases/<release ID>/`)
+  holds the release run's exported evidence, receipts computed by dctools
+  (`execution_recorded` from the run audit, `contract_checked` from the
+  computation lock, `known_answer_checked` from testthat in a separate
+  process; the rest `not_established` or `not_run` with a reason), the
+  candidate checklist (`checklist.json`, `checklist.md`: requirements,
+  outcomes, unresolved items and blockers, waivable or nonwaivable, with no
+  acceptances proposed), byte copies of the deliverables, and the manifest,
+  written last (schema 1; plain SHA-256; no self-hash, evidence commit,
+  approval or tag). It reads `contracts/requirements.yml` and
+  `records/unresolved.yml`, and refuses a dirty tree, a run not ledgered from
+  a clean tree at HEAD, and an existing bundle directory.
+
 * Computation lock v0 (schema version 1): `computation_lock()`,
   `write_computation_lock()`, `read_computation_lock()` (also at a git ref),
   `check_computation_lock()` and `lock_review_table()`. For each
