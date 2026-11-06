@@ -129,7 +129,12 @@ test_that("a clean candidate gives passing receipts, no blockers and a manifest 
     expect_identical(a$sha256, digest::digest(file = file.path(dir, a$path), algo = "sha256"), info = a$path)
   }
   expect_true("deliverables/output/record.html" %in% files)
-  expect_true(all(c("run/ledger.json", "run/audit.md", "receipts.json", "checklist.md") %in% files))
+  expect_true(all(c("run/ledger.json", "run/audit.md", "receipts.json", "checklist.md", ".gitattributes") %in% files))
+  # The digest is of the blob git committed at A (on Windows the working-tree
+  # copy may have CRLF line endings).
+  blob <- tempfile()
+  system2("git", c("-C", shQuote(proj), "cat-file", "blob", "HEAD:contracts/requirements.yml"), stdout = blob)
+  expect_identical(manifest$requirements_sha256, digest::digest(file = blob, algo = "sha256"))
   expect_identical(manifest$analysis_commit, system2("git", c("-C", proj, "rev-parse", "HEAD"), stdout = TRUE))
   expect_identical(out$manifest_sha256, digest::digest(file = file.path(dir, "manifest.json"), algo = "sha256"))
   manifest_text <- paste(readLines(file.path(dir, "manifest.json")), collapse = "\n")
