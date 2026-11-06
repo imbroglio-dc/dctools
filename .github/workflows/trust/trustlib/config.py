@@ -16,7 +16,7 @@ GATE_PATTERNS = ("plan-v*", "data-v*", "results-v*", "v*-submitted")
 FROZEN_KEYS = ("always",) + GATE_PATTERNS
 BUILTIN_FROZEN = (".github/**",)
 ROLES = ("support", "critique")
-KNOWN_CHECKS = ("ownership", "tests", "ledger", "audit")
+KNOWN_CHECKS = ("ownership", "tests", "ledger", "audit", "release")
 
 
 class ConfigError(Exception):
