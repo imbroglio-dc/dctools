@@ -208,13 +208,15 @@
   exclude <- .ledger_dir_in_repo(ledger_dir, repo)
   dirty <- .git_dirty_files(repo, exclude, .records_in_repo(records, repo))
   engine <- .dctools_engine()
+  lock <- .renv_lock_path(repo)
   list(
     sha = .git_head(repo),
     remote = .git_remote(repo),
     clean = length(dirty) == 0L,
     dirty_files = I(dirty),
     r_version = paste(R.version$major, R.version$minor, sep = "."),
-    renv_lock_sha256 = .sha256_file(file.path(root, "renv.lock")),
+    renv_lock = .repo_relative(lock, root),
+    renv_lock_sha256 = .sha256_file(lock),
     dctools_version = engine$version,
     dctools_remote_sha = engine$remote_sha
   )

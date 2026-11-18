@@ -24,7 +24,9 @@ fixture_links <- function() {
   )
 }
 
-.build_ledger_fixture <- function(fail) {
+# With `subdir = TRUE` the git repository is the project's PARENT folder, so
+# the targets project (and its renv.lock) sit in a subfolder of the repository.
+.build_ledger_fixture <- function(fail, subdir = FALSE) {
   proj <- file.path(tempfile("ledger-fixture-"), "project")
   dir.create(file.path(proj, "R"), recursive = TRUE)
   dir.create(file.path(proj, "data", "raw"), recursive = TRUE)
@@ -74,8 +76,9 @@ fixture_links <- function() {
   )
   writeLines("targets::tar_make(reporter = 'silent')", file.path(proj, "run.R"))
   write_fixture_lock(proj)
+  repo_dir <- if (subdir) dirname(proj) else proj
   git <- function(...) {
-    system2("git", c("-C", proj, ...), stdout = TRUE, stderr = TRUE)
+    system2("git", c("-C", repo_dir, ...), stdout = TRUE, stderr = TRUE)
   }
   git("init", "-q")
   git("config", "user.email", "test@example.com")
@@ -139,20 +142,27 @@ write_fixture_lock <- function(proj, version = as.character(utils::packageVersio
   )
 }
 
-ledger_fixture <- function(fail = FALSE) {
-  key <- if (fail) "fail" else "pass"
+ledger_fixture <- function(fail = FALSE, subdir = FALSE) {
+  key <- paste0(if (fail) "fail" else "pass", if (subdir) "-subdir" else "")
   if (is.null(.fixture_cache[[key]])) {
-    .fixture_cache[[key]] <- .build_ledger_fixture(fail)
+    .fixture_cache[[key]] <- .build_ledger_fixture(fail, subdir = subdir)
   }
   .fixture_cache[[key]]
 }
 
 # Also sets DCTOOLS_TEST_SRC for the calling test: the audit's targets calls
 # source _targets.R in a child process that must load this dctools.
-copy_fixture <- function(fail = FALSE, env = parent.frame()) {
+# Returns the project folder of the copy; with `subdir = TRUE` the whole
+# repository (the project's parent) is copied.
+copy_fixture <- function(fail = FALSE, env = parent.frame(), subdir = FALSE) {
   withr::local_envvar(DCTOOLS_TEST_SRC = dctools_src(), .local_envir = env)
-  src <- ledger_fixture(fail)
-  dest <- file.path(withr::local_tempdir(.local_envir = env), "project")
+  src <- ledger_fixture(fail, subdir = subdir)
+  base <- withr::local_tempdir(.local_envir = env)
+  if (subdir) {
+    fs::dir_copy(dirname(src), file.path(base, "repo"))
+    return(file.path(base, "repo", "project"))
+  }
+  dest <- file.path(base, "project")
   fs::dir_copy(src, dest)
   dest
 }

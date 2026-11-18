@@ -37,8 +37,42 @@
 
 .git_head <- function(repo) .git(repo, c("rev-parse", "HEAD"))
 
+# The repository root, in the same form R gives for `repo`. Built from `repo`
+# and git's relative `--show-cdup`, not from `--show-toplevel`: on Windows, a
+# repository on a mapped network drive is reported by `--show-toplevel` in UNC
+# form (`//server/share/...`) while R works under the drive letter (`S:/...`),
+# so no path R produced would ever match the root and every repo-relative path
+# would stay absolute.
 .git_root <- function(repo) {
-  normalizePath(.git(repo, c("rev-parse", "--show-toplevel")), winslash = "/")
+  up <- .git(repo, c("rev-parse", "--show-cdup"))
+  up <- if (length(up)) up[[1]] else ""
+  base <- normalizePath(repo, winslash = "/", mustWork = TRUE)
+  root <- if (nzchar(up)) normalizePath(file.path(base, up), winslash = "/") else base
+  sub("(?<=.)/+$", "", root, perl = TRUE)
+}
+
+# The renv.lock that governs the project: the nearest one from the working
+# directory (the project root, where the runner and the audit run) up to the
+# repository root. A project kept in a subfolder of its repository has its
+# renv.lock in that subfolder, not at the root. NA when there is none.
+.renv_lock_path <- function(repo = ".") {
+  root <- .git_root(repo)
+  dir <- normalizePath(getwd(), winslash = "/")
+  dirs <- root
+  if (identical(dir, root) || startsWith(dir, paste0(root, "/"))) {
+    dirs <- dir
+    while (!identical(dir, root)) {
+      dir <- dirname(dir)
+      dirs <- c(dirs, dir)
+    }
+  }
+  for (d in dirs) {
+    path <- file.path(d, "renv.lock")
+    if (file.exists(path)) {
+      return(path)
+    }
+  }
+  NA_character_
 }
 
 .strip_credentials <- function(url) sub("^(https?://)[^/]*@", "\\1", url)

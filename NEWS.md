@@ -1,5 +1,21 @@
 # dctools (development version)
 
+* Run ledger and audit: projects that are not at the root of their git
+  repository, and repositories on Windows mapped network drives, now audit
+  correctly.
+  - The repository root is built from R's own path and `git rev-parse
+    --show-cdup`, not `--show-toplevel`. On a mapped drive `--show-toplevel`
+    gives the UNC form (`//server/share/...`) while R works under `S:/...`, so
+    code locations were never made repo-relative (C1 failed with "the source
+    file is not in the repository") and the ledger directory was not exempt
+    from the clean-tree check.
+  - `renv.lock` is the nearest one from the project folder up to the
+    repository root, not always the root's (C11 was "not evaluated" for a
+    project in a subfolder). The ledger records its repo-relative path as
+    `code$renv_lock`; older ledgers get the same search. Fixed on the way: the
+    field is read with `[[`, since `$` would partially match
+    `renv_lock_sha256` in an older ledger.
+
 * Release kit, part 3 (P9c): controlled insertion. `show_count()` inserts a
   report's count into a Quarto document exactly as the report masks it
   (masking recomputed by dctools), inside a span naming the target, count id

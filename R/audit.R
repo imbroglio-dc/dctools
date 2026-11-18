@@ -594,7 +594,15 @@
 
 .check_environment <- function(ledger, repo) {
   env <- ledger$environment
-  lock_path <- file.path(.git_root(repo), "renv.lock")
+  # The lock the run recorded (repo-relative); ledgers that predate the field
+  # get the same search the ledger uses. `[[` and not `$`: `$` matches partially,
+  # so in an older ledger `$renv_lock` would return `renv_lock_sha256`.
+  recorded <- .as_chr(ledger$code[["renv_lock"]])
+  lock_path <- if (.is_missing(recorded)) {
+    .renv_lock_path(repo)
+  } else {
+    file.path(.git_root(repo), recorded)
+  }
   reason <- if (!is.list(env)) {
     "the ledger records no environment"
   } else if (!file.exists(lock_path)) {
