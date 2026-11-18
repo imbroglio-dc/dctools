@@ -412,9 +412,12 @@ check_computation_lock <- function(
     l <- jsonlite::fromJSON(.lock_json(l), simplifyVector = FALSE)
     do.call(rbind, lapply(l$entries, function(e) {
       target <- if (is.null(e$target)) "-" else e$target
+      # A decision with no target (call_status "no_target") has no role either; a NULL role
+      # would make this a zero-row data frame and fail the rbind.
+      role <- if (is.null(e$role)) "-" else e$role
       loc <- if (is.null(e$location)) "unknown" else paste0(e$location$file, ":", e$location$line)
       base <- data.frame(
-        decision = e$decision_id, target = target, role = e$role, location = loc,
+        decision = e$decision_id, target = target, role = role, location = loc,
         stringsAsFactors = FALSE
       )
       if (!length(e$arguments)) {

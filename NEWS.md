@@ -1,5 +1,9 @@
 # dctools (development version)
 
+* `lock_review_table()` no longer fails on a decision with no target whose
+  role is `NA` (as `computation_lock()` documents for a target-less decision):
+  the NA role became a JSON null and made a zero-row data frame.
+
 * Run ledger and audit: projects that are not at the root of their git
   repository, and repositories on Windows mapped network drives, now audit
   correctly.

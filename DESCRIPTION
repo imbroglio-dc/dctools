@@ -1,6 +1,6 @@
 Package: dctools
 Title: Reusable Utilities and Project Scaffolding for Biostatistics Research
-Version: 0.1.0.9001
+Version: 0.1.0.9002
 Authors@R:
     person(given = "David",
            family = "Chen",

@@ -200,3 +200,13 @@ test_that("the review table shows a changed argument against the approved baseli
   # Without a baseline the change column is empty.
   expect_false(any(grepl("changed|added|removed", lock_review_table(now))))
 })
+
+test_that("the review table lists a no-target decision whose role is NA", {
+  skip_lock_fixture()
+  proj <- lock_fixture()
+  links <- lock_links()
+  links$role[links$decision_id == "D5"] <- NA_character_ # as documented: target = NA, nothing else
+  lock <- computation_lock(links, config = "config/analysis.yml", script = "_targets.R", repo = proj)
+  # The NA role becomes a JSON null; the review table reads the lock through JSON.
+  expect_true("| D5 | - | unknown | - |  | no_target |  |" %in% lock_review_table(lock))
+})
