@@ -49,12 +49,8 @@ deliverables, and the manifest, written last.
 \code{testthat::test_dir()} on each \code{known_answer_tests} directory (in a
 separate R process; a directory where any test skipped or made no
 expectation is \code{not_established}, and the reason gives the counts of
-tests, expectations and skips), \code{render_checked} from
-\code{\link[=check_rendered_values]{check_rendered_values()}} on each deliverable against the run's
-reportable reports (insertion records under \verb{render/}; exemptions from
-\code{render_exemptions}, by default years; the reason gives the number of
-insertions and bare numbers checked in each deliverable).
-\code{extraction_rechecked} and \code{diagnostics_checked} are \code{not_established} in
+tests, expectations and skips). Deliverables are copied byte for byte and
+not inspected. \code{extraction_rechecked} and \code{diagnostics_checked} are \code{not_established} in
 this version,
 \code{reproduced} is \code{not_run} (no identified prior run), and
 \code{disclosure_approved} is \code{not_run} because the release approval decides it.

@@ -3,7 +3,6 @@ release_requirements <- function(...) {
     contract_checked = "required",
     execution_recorded = "required",
     extraction_rechecked = "optional",
-    render_checked = "optional",
     reproduced = "optional",
     disclosure_approved = "required",
     known_answer_checked = "required",
@@ -73,14 +72,11 @@ release_fixture <- function(requirements = release_requirements(), items = list(
     input_dirs = "data/raw",
     env_packages = "jsonlite"
   ))
-  # The deliverable, with its values inserted through show_count().
-  evidence <- targets::tar_read_raw("evidence", store = file.path(proj, "_targets"))
-  writeLines(c(
-    "<html><head><title>Counts</title></head><body><h1>Counts</h1>",
-    paste0("<p>Values: ", show_count(evidence, "n_values", format = "html"), "; large: ",
-           show_count(evidence, "n_large", format = "html"), ".</p>"),
-    "</body></html>"
-  ), file.path(proj, "output", "flow.html"))
+  # The deliverable; the bundle copies it and does not inspect it.
+  writeLines(
+    "<html><head><title>Counts</title></head><body><h1>Counts</h1></body></html>",
+    file.path(proj, "output", "flow.html")
+  )
   proj
 }
 
@@ -120,11 +116,12 @@ test_that("a clean candidate gives passing receipts, no blockers and a manifest 
   receipts <- bundle_json(proj, "receipts.json")$receipts
   outcomes <- stats::setNames(vapply(receipts, `[[`, "", "outcome"), vapply(receipts, `[[`, "", "check"))
   expect_identical(
-    outcomes[c("contract_checked", "execution_recorded", "known_answer_checked", "render_checked",
+    outcomes[c("contract_checked", "execution_recorded", "known_answer_checked",
                "reproduced", "disclosure_approved")],
     c(contract_checked = "pass", execution_recorded = "pass", known_answer_checked = "pass",
-      render_checked = "pass", reproduced = "not_run", disclosure_approved = "not_run")
+      reproduced = "not_run", disclosure_approved = "not_run")
   )
+  expect_false("render_checked" %in% names(outcomes))
   expect_identical(blocker_ids(proj), character(0))
   expect_identical(out$n_blockers, 0L)
   diag <- Filter(function(r) r$check == "diagnostics_checked", receipts)[[1]]
@@ -136,9 +133,8 @@ test_that("a clean candidate gives passing receipts, no blockers and a manifest 
   for (a in manifest$artifacts) {
     expect_identical(a$sha256, digest::digest(file = file.path(dir, a$path), algo = "sha256"), info = a$path)
   }
-  expect_true(all(c("deliverables/output/flow.html", "render/output/flow.html.insertions.json") %in% files))
-  ins <- bundle_json(proj, "render/output/flow.html.insertions.json")$insertions
-  expect_identical(vapply(ins, `[[`, "", "id"), c("n_values", "n_large"))
+  expect_true("deliverables/output/flow.html" %in% files)
+  expect_false(any(startsWith(files, "render/")))
   expect_true(all(c("run/ledger.json", "run/audit.md", "receipts.json", "checklist.md", ".gitattributes") %in% files))
   # The digest is of the blob git committed at A (on Windows the working-tree
   # copy may have CRLF line endings).
@@ -295,36 +291,16 @@ test_that("a skipped known-answer test in a candidate is a not-established recei
   expect_identical(known$outcome, "not_established")
   expect_match(known$reason, "tests/known: 1 of 1 tests skipped", fixed = TRUE)
   expect_identical(blocker_ids(proj), "check:known_answer_checked")
-  render <- Filter(function(r) r$check == "render_checked", receipts)[[1]]
-  expect_identical(render$outcome, "pass")
-  expect_identical(render$reason, "output/flow.html: 2 insertions and 0 bare numbers checked")
 })
 
-# AUD-005: a deliverable with no value checked is not established, and the
-# receipt says how many values were checked.
-test_that("the render receipt counts the values checked, and nothing checked is not established", {
-  bundle <- withr::local_tempdir()
-  withr::local_dir(bundle)
-  writeLines(
-    c(
-      "<html><body><h1>Results</h1><p>Shown in the figure.</p>",
-      "<img src=\"forest.png\" alt=\"forest plot\"></body></html>"
-    ),
-    "figure.html"
-  )
-  writeLines("<html><body><p>The hazard ratio was 0.72.</p></body></html>", "typed.html")
-  writeLines("<html><body><p>Protocol 17.</p></body></html>", "exempt.html")
-  figure <- .render_receipt("figure.html", list(), exempt = .default_exemptions, bundle_rel = "b")
-  expect_identical(figure$outcome, "not_established")
-  expect_identical(
-    figure$reason,
-    "figure.html: 0 insertions and 0 bare numbers checked; figure.html: no values checked"
-  )
-  typed <- .render_receipt("typed.html", list(), exempt = .default_exemptions, bundle_rel = "b")
-  expect_identical(typed$outcome, "fail")
-  expect_match(typed$reason, "typed.html: 0 insertions and 1 bare numbers checked", fixed = TRUE)
-  expect_match(typed$reason, "bare number 0.72 outside an inserted value", fixed = TRUE)
-  both <- .render_receipt(c("figure.html", "exempt.html"), list(), exempt = "^17$", bundle_rel = "b")
-  expect_identical(both$outcome, "not_established")
-  expect_match(both$reason, "exempt.html: 0 insertions and 1 bare numbers checked", fixed = TRUE)
+test_that("render_checked is retired: requirements that declare it are invalid", {
+  skip_if_not_installed("yaml")
+  repo <- withr::local_tempdir()
+  dir.create(file.path(repo, "contracts"))
+  reqs <- release_requirements(render_checked = "optional")
+  yaml::write_yaml(reqs, file.path(repo, "contracts", "requirements.yml"))
+  res <- .read_requirements("contracts/requirements.yml", repo)
+  expect_identical(res$problems, "unknown checks: render_checked")
+  yaml::write_yaml(release_requirements(), file.path(repo, "contracts", "requirements.yml"))
+  expect_identical(.read_requirements("contracts/requirements.yml", repo)$problems, character(0))
 })
