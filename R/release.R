@@ -137,10 +137,10 @@ allocate_release_id <- function(date = Sys.Date()) {
     return(.receipt("known_answer_checked", "not_run", "no known_answer_tests declared"))
   }
   .require_pkgs(c("callr", "testthat"), "build_release_bundle")
-  per_dir <- vapply(dirs, function(d) {
+  per_dir <- lapply(dirs, function(d) {
     path <- file.path(repo, d)
     if (!dir.exists(path)) {
-      return("missing")
+      return(list(status = "missing", reason = paste0(d, ": missing")))
     }
     res <- tryCatch(
       callr::r(
@@ -151,7 +151,18 @@ allocate_release_id <- function(date = Sys.Date()) {
             stop_on_failure = FALSE,
             load_package = "none"
           ))
-          c(n = nrow(r), failed = sum(r$failed), error = sum(r$error))
+          # testthat's `nb` counts a skip as an expectation, and an empty
+          # test is reported as a skip, so the expectations made are the
+          # passed and failed ones.
+          made <- r$passed + r$failed
+          c(
+            n = nrow(r),
+            expectations = sum(made),
+            skipped = sum(r$skipped),
+            no_expectation = sum(made == 0),
+            failed = sum(r$failed),
+            error = sum(r$error)
+          )
         },
         args = list(dir = normalizePath(path)),
         wd = normalizePath(repo),
@@ -160,21 +171,40 @@ allocate_release_id <- function(date = Sys.Date()) {
       error = function(e) NULL
     )
     if (is.null(res)) {
-      "error"
-    } else if (res[["n"]] == 0) {
-      "empty"
-    } else if (res[["failed"]] > 0 || res[["error"]] > 0) {
-      "fail"
-    } else {
-      "pass"
+      return(list(status = "error", reason = paste0(d, ": error")))
     }
-  }, "")
-  if (all(per_dir == "pass")) {
-    return(.receipt("known_answer_checked", "pass", NULL, character(0)))
+    if (res[["n"]] == 0) {
+      return(list(status = "empty", reason = paste0(d, ": empty")))
+    }
+    counts <- sprintf(
+      "%d tests, %d expectations, %d skipped, %d without an expectation",
+      as.integer(res[["n"]]), as.integer(res[["expectations"]]),
+      as.integer(res[["skipped"]]), as.integer(res[["no_expectation"]])
+    )
+    if (res[["failed"]] > 0 || res[["error"]] > 0) {
+      list(status = "fail", reason = sprintf(
+        "%s: fail, %d failed and %d errored (%s)",
+        d, as.integer(res[["failed"]]), as.integer(res[["error"]]), counts
+      ))
+    } else if (res[["skipped"]] > 0 || res[["no_expectation"]] > 0) {
+      list(status = "not_established", reason = sprintf(
+        "%s: %d of %d tests skipped, %d of %d tests without an expectation (%s)",
+        d, as.integer(res[["skipped"]]), as.integer(res[["n"]]),
+        as.integer(res[["no_expectation"]]), as.integer(res[["n"]]), counts
+      ))
+    } else {
+      list(status = "pass", reason = paste0(d, ": ", counts))
+    }
+  })
+  status <- vapply(per_dir, `[[`, "", "status")
+  reason <- paste(vapply(per_dir, `[[`, "", "reason"), collapse = "; ")
+  outcome <- if (all(status == "pass")) {
+    "pass"
+  } else if (any(status == "fail")) {
+    "fail"
+  } else {
+    "not_established"
   }
-  bad <- per_dir[per_dir != "pass"]
-  reason <- paste(sprintf("%s: %s", names(bad), bad), collapse = "; ")
-  outcome <- if (any(bad == "fail")) "fail" else "not_established"
   .receipt("known_answer_checked", outcome, reason)
 }
 
@@ -425,9 +455,12 @@ allocate_release_id <- function(date = Sys.Date()) {
 #' [audit_run()] on the run's ledger, `contract_checked` from
 #' [check_computation_lock()], `known_answer_checked` from
 #' `testthat::test_dir()` on each `known_answer_tests` directory (in a
-#' separate R process), `render_checked` from [check_rendered_values()] on
-#' each deliverable against the run's reportable reports (insertion records
-#' under `render/`; exemptions from `render_exemptions`, by default years).
+#' separate R process; a directory where any test skipped or made no
+#' expectation is `not_established`, and the reason gives the counts of
+#' tests, expectations and skips), `render_checked` from
+#' [check_rendered_values()] on each deliverable against the run's
+#' reportable reports (insertion records under `render/`; exemptions from
+#' `render_exemptions`, by default years).
 #' `extraction_rechecked` and `diagnostics_checked` are `not_established` in
 #' this version,
 #' `reproduced` is `not_run` (no identified prior run), and
