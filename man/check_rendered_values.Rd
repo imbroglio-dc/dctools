@@ -16,8 +16,11 @@ for numbers allowed outside spans.}
 }
 \value{
 A list: \code{outcome} (\code{"pass"}, \code{"fail"} or \code{"not_established"}),
-\code{problems}, and \code{insertions} (one record per span: \code{index}, \code{target},
-\code{id}, \code{rule}, \code{display}, \code{section}, the nearest preceding heading).
+\code{problems}, \code{insertions} (one record per span: \code{index}, \code{target},
+\code{id}, \code{rule}, \code{display}, \code{section}, the nearest preceding heading),
+\code{n_insertions} (the number of spans checked) and \code{n_bare_numbers} (the
+number of distinct numbers checked in the visible text outside spans,
+exempt or not).
 }
 \description{
 The render check (\code{render_checked}, architecture section 9) for an HTML
@@ -37,6 +40,8 @@ identity.
 }
 
 Only HTML is checked; a document in another format is not established.
+A page with no span and no number in its visible text has had no value
+checked, and is not established either.
 }
 \seealso{
 \code{\link[=show_count]{show_count()}}, \code{\link[=build_release_bundle]{build_release_bundle()}}.

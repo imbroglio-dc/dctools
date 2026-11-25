@@ -295,4 +295,36 @@ test_that("a skipped known-answer test in a candidate is a not-established recei
   expect_identical(known$outcome, "not_established")
   expect_match(known$reason, "tests/known: 1 of 1 tests skipped", fixed = TRUE)
   expect_identical(blocker_ids(proj), "check:known_answer_checked")
+  render <- Filter(function(r) r$check == "render_checked", receipts)[[1]]
+  expect_identical(render$outcome, "pass")
+  expect_identical(render$reason, "output/flow.html: 2 insertions and 0 bare numbers checked")
+})
+
+# AUD-005: a deliverable with no value checked is not established, and the
+# receipt says how many values were checked.
+test_that("the render receipt counts the values checked, and nothing checked is not established", {
+  bundle <- withr::local_tempdir()
+  withr::local_dir(bundle)
+  writeLines(
+    c(
+      "<html><body><h1>Results</h1><p>Shown in the figure.</p>",
+      "<img src=\"forest.png\" alt=\"forest plot\"></body></html>"
+    ),
+    "figure.html"
+  )
+  writeLines("<html><body><p>The hazard ratio was 0.72.</p></body></html>", "typed.html")
+  writeLines("<html><body><p>Protocol 17.</p></body></html>", "exempt.html")
+  figure <- .render_receipt("figure.html", list(), exempt = .default_exemptions, bundle_rel = "b")
+  expect_identical(figure$outcome, "not_established")
+  expect_identical(
+    figure$reason,
+    "figure.html: 0 insertions and 0 bare numbers checked; figure.html: no values checked"
+  )
+  typed <- .render_receipt("typed.html", list(), exempt = .default_exemptions, bundle_rel = "b")
+  expect_identical(typed$outcome, "fail")
+  expect_match(typed$reason, "typed.html: 0 insertions and 1 bare numbers checked", fixed = TRUE)
+  expect_match(typed$reason, "bare number 0.72 outside an inserted value", fixed = TRUE)
+  both <- .render_receipt(c("figure.html", "exempt.html"), list(), exempt = "^17$", bundle_rel = "b")
+  expect_identical(both$outcome, "not_established")
+  expect_match(both$reason, "exempt.html: 0 insertions and 1 bare numbers checked", fixed = TRUE)
 })

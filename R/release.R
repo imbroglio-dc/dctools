@@ -216,14 +216,15 @@ allocate_release_id <- function(date = Sys.Date()) {
   }
   outcomes <- character(0)
   problems <- character(0)
+  checked <- character(0)
   evidence <- character(0)
   for (d in deliverables) {
     res <- check_rendered_values(d, reports, exempt = exempt)
     outcomes <- c(outcomes, res$outcome)
     problems <- c(problems, if (length(res$problems)) paste0(d, ": ", res$problems))
-    if (identical(res$outcome, "not_established")) {
-      problems <- c(problems, paste0(d, ": not an HTML document, so its values cannot be checked"))
-    }
+    checked <- c(checked, sprintf(
+      "%s: %d insertions and %d bare numbers checked", d, res$n_insertions, res$n_bare_numbers
+    ))
     rel <- file.path("render", paste0(d, ".insertions.json"))
     out <- file.path(bundle_rel, rel)
     dir.create(dirname(out), recursive = TRUE, showWarnings = FALSE)
@@ -235,6 +236,7 @@ allocate_release_id <- function(date = Sys.Date()) {
   if (length(problems) > 10L) {
     reason <- paste0(reason, sprintf("; and %d more", length(problems) - 10L))
   }
+  reason <- paste(c(paste(checked, collapse = "; "), reason), collapse = "; ")
   .receipt("render_checked", outcome, reason, evidence)
 }
 
@@ -460,7 +462,8 @@ allocate_release_id <- function(date = Sys.Date()) {
 #' tests, expectations and skips), `render_checked` from
 #' [check_rendered_values()] on each deliverable against the run's
 #' reportable reports (insertion records under `render/`; exemptions from
-#' `render_exemptions`, by default years).
+#' `render_exemptions`, by default years; the reason gives the number of
+#' insertions and bare numbers checked in each deliverable).
 #' `extraction_rechecked` and `diagnostics_checked` are `not_established` in
 #' this version,
 #' `reproduced` is `not_run` (no identified prior run), and
