@@ -133,22 +133,30 @@ show_count <- function(report, id, target = NULL, rule = "count", format = c("au
 #'   identity.
 #'
 #' Only HTML is checked; a document in another format is not established.
+#' A page with no span and no number in its visible text has had no value
+#' checked, and is not established either.
 #'
 #' @param path The rendered HTML file.
 #' @param reports A named list of dctools reports (target name to report).
 #' @param exempt Regular expressions (matched against each whole number)
 #'   for numbers allowed outside spans.
 #' @return A list: `outcome` (`"pass"`, `"fail"` or `"not_established"`),
-#'   `problems`, and `insertions` (one record per span: `index`, `target`,
-#'   `id`, `rule`, `display`, `section`, the nearest preceding heading).
+#'   `problems`, `insertions` (one record per span: `index`, `target`,
+#'   `id`, `rule`, `display`, `section`, the nearest preceding heading),
+#'   `n_insertions` (the number of spans checked) and `n_bare_numbers` (the
+#'   number of distinct numbers checked in the visible text outside spans,
+#'   exempt or not).
 #' @seealso [show_count()], [build_release_bundle()].
 #' @export
 check_rendered_values <- function(path, reports, exempt = .default_exemptions) {
+  none <- function(outcome, problems) {
+    list(outcome = outcome, problems = problems, insertions = list(), n_insertions = 0L, n_bare_numbers = 0L)
+  }
   if (!grepl("\\.html?$", path, ignore.case = TRUE)) {
-    return(list(outcome = "not_established", problems = "not an HTML document", insertions = list()))
+    return(none("not_established", "not an HTML document, so its values cannot be checked"))
   }
   if (!file.exists(path)) {
-    return(list(outcome = "fail", problems = paste0(path, " does not exist"), insertions = list()))
+    return(none("fail", paste0(path, " does not exist")))
   }
   html <- paste(readLines(path, warn = FALSE, encoding = "UTF-8"), collapse = "\n")
   body <- gsub("(?is)<head\\b.*?</head>", " ", html, perl = TRUE)
@@ -189,5 +197,21 @@ check_rendered_values <- function(path, reports, exempt = .default_exemptions) {
   for (n in numbers[!allowed]) {
     problems <- c(problems, paste0("bare number ", n, " outside an inserted value"))
   }
-  list(outcome = if (length(problems)) "fail" else "pass", problems = problems, insertions = insertions)
+  # A page with nothing to check has had no value checked (architecture
+  # sections 6.3 and 12.2): that is not established, never a pass.
+  outcome <- if (length(problems)) {
+    "fail"
+  } else if (!length(insertions) && !length(numbers)) {
+    problems <- "no values checked"
+    "not_established"
+  } else {
+    "pass"
+  }
+  list(
+    outcome = outcome,
+    problems = problems,
+    insertions = insertions,
+    n_insertions = length(insertions),
+    n_bare_numbers = length(numbers)
+  )
 }

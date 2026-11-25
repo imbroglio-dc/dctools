@@ -226,3 +226,105 @@ test_that("a release is built only from a clean tree at the ledgered commit", {
   expect_false(dir.exists(file.path(proj, "evidence")))
   expect_error(build_copy(proj, release_id = "abc123"), class = "dctools_release_id_error")
 })
+
+# AUD-004: a known-answer directory where a test skipped, or made no
+# expectation, has not established its answer; it is never `pass`.
+known_answer_dir <- function(lines, env = parent.frame()) {
+  repo <- withr::local_tempdir(.local_envir = env)
+  dir.create(file.path(repo, "tests", "approved"), recursive = TRUE)
+  writeLines(lines, file.path(repo, "tests", "approved", "test-known.R"))
+  repo
+}
+
+test_that("a known-answer directory whose tests all skip is not established, with its counts", {
+  skip_if_not_installed("callr")
+  repo <- known_answer_dir(c(
+    'test_that("conversion", { skip("written later") })',
+    'test_that("join", { testthat::skip_if(TRUE, "fixture missing") })'
+  ))
+  r <- .known_answer_receipt("tests/approved", repo)
+  expect_identical(r$outcome, "not_established")
+  expect_match(r$reason, "tests/approved: 2 of 2 tests skipped", fixed = TRUE)
+  expect_match(r$reason, "2 tests, 0 expectations, 2 skipped", fixed = TRUE)
+})
+
+test_that("a known-answer test with no expectation, or a skip after one, is not established", {
+  skip_if_not_installed("callr")
+  empty <- .known_answer_receipt("tests/approved", known_answer_dir('test_that("estimate", { x <- 0.25 })'))
+  expect_identical(empty$outcome, "not_established")
+  expect_match(empty$reason, "1 of 1 tests without an expectation", fixed = TRUE)
+  partial <- .known_answer_receipt(
+    "tests/approved",
+    known_answer_dir(c(
+      'test_that("a", { expect_equal(1 + 1, 2) })',
+      'test_that("b", { expect_true(TRUE); skip("rest later") })'
+    ))
+  )
+  expect_identical(partial$outcome, "not_established")
+  expect_match(partial$reason, "1 of 2 tests skipped", fixed = TRUE)
+})
+
+test_that("known-answer controls: expectations that hold pass with counts, a failure or error fails", {
+  skip_if_not_installed("callr")
+  ok <- .known_answer_receipt(
+    "tests/approved",
+    known_answer_dir('test_that("conversion", { expect_equal(300 / 88.4, 3.393665, tolerance = 1e-6) })')
+  )
+  expect_identical(ok$outcome, "pass")
+  expect_identical(ok$reason, "tests/approved: 1 tests, 1 expectations, 0 skipped, 0 without an expectation")
+  bad <- known_answer_dir(c(
+    'test_that("conversion", { expect_equal(300 / 1, 300 / 88.4, tolerance = 1e-6) })',
+    'test_that("later", { skip("written later") })'
+  ))
+  failed <- .known_answer_receipt("tests/approved", bad)
+  expect_identical(failed$outcome, "fail")
+  expect_match(failed$reason, "fail, 1 failed and 0 errored", fixed = TRUE)
+  errored <- .known_answer_receipt("tests/approved", known_answer_dir('test_that("x", { stop("boom") })'))
+  expect_identical(errored$outcome, "fail")
+  expect_match(errored$reason, "0 failed and 1 errored", fixed = TRUE)
+})
+
+test_that("a skipped known-answer test in a candidate is a not-established receipt and a blocker", {
+  skip_ledger_fixture()
+  skip_if_not_installed("yaml")
+  local_engine()
+  proj <- release_fixture(known_test = "skip('fixture missing')")
+  build_copy(proj)
+  receipts <- bundle_json(proj, "receipts.json")$receipts
+  known <- Filter(function(r) r$check == "known_answer_checked", receipts)[[1]]
+  expect_identical(known$outcome, "not_established")
+  expect_match(known$reason, "tests/known: 1 of 1 tests skipped", fixed = TRUE)
+  expect_identical(blocker_ids(proj), "check:known_answer_checked")
+  render <- Filter(function(r) r$check == "render_checked", receipts)[[1]]
+  expect_identical(render$outcome, "pass")
+  expect_identical(render$reason, "output/flow.html: 2 insertions and 0 bare numbers checked")
+})
+
+# AUD-005: a deliverable with no value checked is not established, and the
+# receipt says how many values were checked.
+test_that("the render receipt counts the values checked, and nothing checked is not established", {
+  bundle <- withr::local_tempdir()
+  withr::local_dir(bundle)
+  writeLines(
+    c(
+      "<html><body><h1>Results</h1><p>Shown in the figure.</p>",
+      "<img src=\"forest.png\" alt=\"forest plot\"></body></html>"
+    ),
+    "figure.html"
+  )
+  writeLines("<html><body><p>The hazard ratio was 0.72.</p></body></html>", "typed.html")
+  writeLines("<html><body><p>Protocol 17.</p></body></html>", "exempt.html")
+  figure <- .render_receipt("figure.html", list(), exempt = .default_exemptions, bundle_rel = "b")
+  expect_identical(figure$outcome, "not_established")
+  expect_identical(
+    figure$reason,
+    "figure.html: 0 insertions and 0 bare numbers checked; figure.html: no values checked"
+  )
+  typed <- .render_receipt("typed.html", list(), exempt = .default_exemptions, bundle_rel = "b")
+  expect_identical(typed$outcome, "fail")
+  expect_match(typed$reason, "typed.html: 0 insertions and 1 bare numbers checked", fixed = TRUE)
+  expect_match(typed$reason, "bare number 0.72 outside an inserted value", fixed = TRUE)
+  both <- .render_receipt(c("figure.html", "exempt.html"), list(), exempt = "^17$", bundle_rel = "b")
+  expect_identical(both$outcome, "not_established")
+  expect_match(both$reason, "exempt.html: 0 insertions and 1 bare numbers checked", fixed = TRUE)
+})
