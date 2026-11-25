@@ -1,5 +1,13 @@
 # dctools (development version)
 
+* Release receipts no longer pass vacuously (system audit 2026-11-23,
+  AUD-004 and AUD-005). `known_answer_checked` is `not_established` when
+  any known-answer test skipped or made no expectation, and its reason gives
+  the counts of tests, expectations and skips. `check_rendered_values()` is
+  `not_established` for a page with no inserted value and no number
+  ("no values checked"), and reports `n_insertions` and `n_bare_numbers`;
+  the `render_checked` receipt's reason gives both for each deliverable.
+
 * Release kit, part 3 (P9c): controlled insertion. `show_count()` inserts a
   report's count into a Quarto document exactly as the report masks it
   (masking recomputed by dctools), inside a span naming the target, count id
