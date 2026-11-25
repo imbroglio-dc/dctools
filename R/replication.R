@@ -5,7 +5,7 @@
 #' The mechanical half of a replication or reproducibility check: join each
 #' computed value onto its target, take the signed difference, and mark
 #' `PASS` / `FAIL` / `UNMATCHED` against the tolerance for that target's `kind`.
-#' It returns the comparison *facts* only — the overall verdict vocabulary
+#' It returns the comparison *facts* only - the overall verdict vocabulary
 #' (e.g. REPLICATED / PARTIAL / FAILED for a replication, PASS / FAIL for a
 #' manuscript audit) is the calling skill's judgment, not this function's.
 #'
@@ -13,7 +13,7 @@
 #' column on `targets` (absolute: `abs(computed - reported) <= tolerance`);
 #' otherwise the entry in `tolerances` for the row's `kind`. A `kind` of
 #' `"p_value"` is compared by significance level (same bucket across the
-#' conventional 0.001 / 0.01 / 0.05 cutpoints), not by numeric difference —
+#' conventional 0.001 / 0.01 / 0.05 cutpoints), not by numeric difference -
 #' encode p-values as their actual value where known.
 #'
 #' Defaults mirror the replication tolerance table (integers exact; estimates

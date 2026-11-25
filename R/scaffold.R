@@ -49,7 +49,7 @@ make_file_dirs <- function(path = ".", code = TRUE, data = TRUE, output = TRUE,
 #'   happens to use it. It writes **no** `CLAUDE.md` and **no** `.claude/`:
 #'   the `project-setup` skill (biostat plugin) writes both the router and the
 #'   traveling `.claude/hooks/` guard set, copied from the plugin's own canonical
-#'   copy (`plugins/biostat/hooks/`) — not from an installed kernel. PHI
+#'   copy (`plugins/biostat/hooks/`) - not from an installed kernel. PHI
 #'   protection that must travel with the repo regardless lives in the
 #'   `.gitignore` (raw/derived data and data extensions are ignored).
 #' * `"package"` - wraps [usethis::create_package()] and layers the package
@@ -127,7 +127,7 @@ create_project <- function(name, path = ".", type = c("analysis", "package"),
   # Directory + pure-mechanical stub only. The *content* template
   # (memos/decisions.md seed) is biostat-owned and dropped in by the
   # project-setup skill, same as its README.md orientation content and
-  # STATUS.md — one home per fact, not duplicated here. No
+  # STATUS.md - one home per fact, not duplicated here. No
   # workflow-feedback.md: tooling/capability feedback belongs in the repo
   # that owns the capability being given feedback about, not in every
   # scaffolded analysis project (see create_project() docs).

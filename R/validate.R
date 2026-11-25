@@ -75,13 +75,13 @@ flag_out_of_range <- function(x, lo = -Inf, hi = Inf, label = NULL) {
 #' A strict-join wrapper: runs a dplyr join with the `relationship` /
 #' `unmatched` / `na_matches` contract set explicitly, and returns the joined
 #' data with a before/after row-count and match-rate audit trail attached. It
-#' turns the merge-time failure [check_unique_id()] cannot see — a join that
-#' should be 1:1 but silently inflates rows — into a reported number, or, if you
+#' turns the merge-time failure [check_unique_id()] cannot see - a join that
+#' should be 1:1 but silently inflates rows - into a reported number, or, if you
 #' declare `relationship`, an immediate error.
 #'
 #' `na_matches` defaults to `"never"` (safer than dplyr's `"na"`): two rows with
 #' `NA` keys are not the same entity. For a `left`/`inner` join, a grown row
-#' count is flagged as a warning — the usual sign of duplicate keys on the right.
+#' count is flagged as a warning - the usual sign of duplicate keys on the right.
 #'
 #' @param left,right Data frames to join.
 #' @param by Character vector of key column name(s), present in both frames.

@@ -43,7 +43,7 @@ that capability (e.g. this package's own \code{workflow-feedback.md}, or
 happens to use it. It writes \strong{no} \code{CLAUDE.md} and \strong{no} \verb{.claude/}:
 the \code{project-setup} skill (biostat plugin) writes both the router and the
 traveling \verb{.claude/hooks/} guard set, copied from the plugin's own canonical
-copy (\verb{plugins/biostat/hooks/}) — not from an installed kernel. PHI
+copy (\verb{plugins/biostat/hooks/}) - not from an installed kernel. PHI
 protection that must travel with the repo regardless lives in the
 \code{.gitignore} (raw/derived data and data extensions are ignored).
 \item \code{"package"} - wraps \code{\link[usethis:create_package]{usethis::create_package()}} and layers the package
