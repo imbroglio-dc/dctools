@@ -1,5 +1,14 @@
 # dctools (development version)
 
+* **Breaking:** the render check is retired (`memos/decisions.md`
+  2026-11-25). `check_rendered_values()`, the `render_checked` receipt and
+  requirement, `render_exemptions` and the bundle's `render/` insertion
+  records are removed; a requirements file that still declares
+  `render_checked` reports it as an unknown check. Deliverables are still
+  copied into the bundle and hashed. `show_count(report, id)` now only
+  returns the masked count as text (the HTML span and the `target`, `rule`
+  and `format` arguments are gone).
+
 * Release receipts no longer pass vacuously (system audit 2026-11-23,
   AUD-004 and AUD-005). `known_answer_checked` is `not_established` when
   any known-answer test skipped or made no expectation, and its reason gives
