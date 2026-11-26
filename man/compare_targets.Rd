@@ -30,7 +30,7 @@ p-value rows.
 The mechanical half of a replication or reproducibility check: join each
 computed value onto its target, take the signed difference, and mark
 \code{PASS} / \code{FAIL} / \code{UNMATCHED} against the tolerance for that target's \code{kind}.
-It returns the comparison \emph{facts} only — the overall verdict vocabulary
+It returns the comparison \emph{facts} only - the overall verdict vocabulary
 (e.g. REPLICATED / PARTIAL / FAILED for a replication, PASS / FAIL for a
 manuscript audit) is the calling skill's judgment, not this function's.
 }
@@ -39,7 +39,7 @@ Tolerance for a row is resolved in order: an explicit non-\code{NA} \code{tolera
 column on \code{targets} (absolute: \code{abs(computed - reported) <= tolerance});
 otherwise the entry in \code{tolerances} for the row's \code{kind}. A \code{kind} of
 \code{"p_value"} is compared by significance level (same bucket across the
-conventional 0.001 / 0.01 / 0.05 cutpoints), not by numeric difference —
+conventional 0.001 / 0.01 / 0.05 cutpoints), not by numeric difference -
 encode p-values as their actual value where known.
 
 Defaults mirror the replication tolerance table (integers exact; estimates

@@ -38,14 +38,14 @@ The joined data frame, with a one-row audit data frame attached as
 A strict-join wrapper: runs a dplyr join with the \code{relationship} /
 \code{unmatched} / \code{na_matches} contract set explicitly, and returns the joined
 data with a before/after row-count and match-rate audit trail attached. It
-turns the merge-time failure \code{\link[=check_unique_id]{check_unique_id()}} cannot see — a join that
-should be 1:1 but silently inflates rows — into a reported number, or, if you
+turns the merge-time failure \code{\link[=check_unique_id]{check_unique_id()}} cannot see - a join that
+should be 1:1 but silently inflates rows - into a reported number, or, if you
 declare \code{relationship}, an immediate error.
 }
 \details{
 \code{na_matches} defaults to \code{"never"} (safer than dplyr's \code{"na"}): two rows with
 \code{NA} keys are not the same entity. For a \code{left}/\code{inner} join, a grown row
-count is flagged as a warning — the usual sign of duplicate keys on the right.
+count is flagged as a warning - the usual sign of duplicate keys on the right.
 }
 \examples{
 left <- data.frame(id = 1:3, x = c("a", "b", "c"))
